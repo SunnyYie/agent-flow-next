@@ -27,10 +27,14 @@ TEAM_ASSET_DIRS = [
 ]
 
 PROJECT_DEFAULT_DIRS = [
+    "hooks",
     "hooks/runtime",
     "hooks/governance",
+    "skills",
     "souls",
+    "wiki",
     "state",
+    "logs",
 ]
 
 
@@ -493,6 +497,71 @@ def init_team_flow(team_id: str, name: str = "", project_dir: Path | None = None
     return init_team(team_id=team_id, name=name, project_dir=project_dir)
 
 
+def _build_project_skills_index() -> str:
+    lines = [
+        "# Project Skills Index",
+        "",
+        "Project-specific skills that override or extend team/global skills.",
+        "",
+        "## Notes For Agents",
+        "",
+        "- Project skills take precedence over team and global skills.",
+        "- Add project-specific workflows here.",
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def _build_project_wiki_index() -> str:
+    lines = [
+        "# Project Wiki Index",
+        "",
+        "Project-specific knowledge that overrides or extends team/global wiki.",
+        "",
+        "## Notes For Agents",
+        "",
+        "- Project wiki takes precedence over team and global wiki.",
+        "- Add project-specific pitfalls, patterns, and decisions here.",
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def _write_project_index_docs(project_root: Path) -> None:
+    (project_root / "skills" / "Index.md").write_text(_build_project_skills_index(), encoding="utf-8")
+    (project_root / "wiki" / "Index.md").write_text(_build_project_wiki_index(), encoding="utf-8")
+
+
+def _write_project_readme(project_root: Path, project_name: str) -> None:
+    content = f"""# {project_name} — AgentFlow Project
+
+本目录是项目级 Agent-flow 配置根目录，提供项目专属的 skills、wiki、hooks 等资产。
+
+## 资源解析优先级
+
+`project > team > global`
+
+项目级资产会覆盖团队和全局的同名资产。
+
+## 目录说明
+
+- `hooks/`: 项目级 Hook（运行时与治理）
+- `references/`: 项目专属参考资料
+- `skills/`: 项目专属技能；`Index.md` 为技能索引
+- `souls/`: 项目专属角色定义
+- `tools/`: 项目专属工具配置
+- `wiki/`: 项目专属知识文档；`Index.md` 为知识索引
+- `state/`: 执行状态与计划
+- `logs/`: 开发日志
+
+## 快速操作
+
+- 查看资源解析：`agent-flow asset resolve`
+- 创建项目技能：`agent-flow asset create --kind skills --name <name> --layer project`
+- 创建项目 wiki：`agent-flow asset create --kind wiki --name <name> --layer project`
+- 绑定团队：`agent-flow bind-team <team_id>`
+"""
+    (project_root / "README.md").write_text(content, encoding="utf-8")
+
+
 def init_project(project_dir: Path) -> Path:
     root = _ensure_layout(layer_root("project", project_dir=project_dir), PROJECT_DEFAULT_DIRS)
     cfg = ProjectConfig(name=Path(project_dir).resolve().name)
@@ -500,6 +569,8 @@ def init_project(project_dir: Path) -> Path:
     soul_path = root / "souls" / "main.md"
     if not soul_path.exists():
         soul_path.write_text("", encoding="utf-8")
+    _write_project_index_docs(root)
+    _write_project_readme(root, cfg.name)
     return root
 
 
