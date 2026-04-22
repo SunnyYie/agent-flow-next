@@ -64,8 +64,9 @@ agent-flow bind-team acme
 ```text
 {team_id}/
 ├── hooks/
-│   ├── governance/
-│   └── runtime/
+│   ├── global/
+│   ├── team/
+│   └── project/
 ├── references/
 ├── skills/
 │   ├── ANCHOR.md

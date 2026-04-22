@@ -61,13 +61,46 @@ GENERIC_WIKI_ALLOWLIST = {
     "pitfalls/workflow/execute-without-search.md",
     "pitfalls/workflow/skip-implementation-plan.md",
 }
-GENERIC_RUNTIME_HOOKS = {
+GENERIC_HOOKS = {
     "context-guard.py",
-    "contract_utils.py",
     "pre-compress-guard.py",
-}
-GENERIC_GOVERNANCE_HOOKS = {
     "promotion-guard.py",
+}
+TEAM_STANDARD_HOOKS = {
+    "contract_utils.py",
+    "agent-team-init.py",
+    "claude-md-bootstrap.py",
+    "code-review-remind.py",
+    "dev-workflow-enforce.py",
+    "error-search-remind.py",
+    "git-branch-guard.py",
+    "implementation-clarification-guard.py",
+    "mcp-tool-factory-guard.py",
+    "parallel-enforce.py",
+    "phase-reminder.py",
+    "preflight-enforce.py",
+    "preflight-guard.py",
+    "project-init-guard.py",
+    "project-structure-enforce.py",
+    "search-tracker.py",
+    "self-questioning-enforce.py",
+    "subtask-guard-enforce.py",
+    "thinking-chain-enforce.py",
+    "user-acceptance-guard.py",
+}
+PLATFORM_HOOKS = {
+    "agent-dispatch-enforce.py",
+    "context-budget-tracker.py",
+    "observation-recorder.py",
+    "session-end-recorder.py",
+    "session-starter.py",
+    "startup-context.py",
+}
+
+HOOK_SCENE_BY_NAME = {
+    **{name: "global" for name in GENERIC_HOOKS},
+    **{name: "team" for name in TEAM_STANDARD_HOOKS},
+    **{name: "project" for name in PLATFORM_HOOKS},
 }
 
 
@@ -160,24 +193,11 @@ def _is_generic_wiki_file(rel: Path) -> bool:
     return text in GENERIC_WIKI_ALLOWLIST
 
 
-def _is_generic_hook_file(rel: Path) -> bool:
-    text = str(rel).lower()
-    parts = {part.lower() for part in rel.parts}
-    if rel.suffix.lower() != ".py":
-        return False
-    if "__pycache__" in parts or "tests" in parts or "docs" in parts or ".agent-flow" in parts:
-        return False
-    if not (text.startswith("runtime/") or text.startswith("governance/")):
-        return False
-    if any(keyword in text for keyword in NON_GENERIC_KEYWORDS):
-        return False
-    return True
-
-
-def _copy_generic_hooks(src: Path, dst_root: Path) -> int:
+def _copy_scene_hooks(src: Path, dst_root: Path) -> int:
     if not src.exists():
         return 0
     copied = 0
+    copied_names: set[str] = set()
     for path in src.rglob("*.py"):
         rel = path.relative_to(src)
         rel_text = str(rel).lower()
@@ -188,28 +208,17 @@ def _copy_generic_hooks(src: Path, dst_root: Path) -> int:
             continue
 
         filename = path.name.lower()
-
-        # Compatible with both "hooks/runtime|governance/*.py" and flat "hooks/*.py".
-        if rel_text.startswith("governance/"):
-            if filename not in GENERIC_GOVERNANCE_HOOKS:
-                continue
-            target = dst_root / rel
-        elif rel_text.startswith("runtime/"):
-            if filename not in GENERIC_RUNTIME_HOOKS:
-                continue
-            target = dst_root / rel
-        else:
-            if filename in GENERIC_GOVERNANCE_HOOKS:
-                folder = "governance"
-            elif filename in GENERIC_RUNTIME_HOOKS:
-                folder = "runtime"
-            else:
-                continue
-            target = dst_root / folder / path.name
+        scene = HOOK_SCENE_BY_NAME.get(filename)
+        if scene is None:
+            continue
+        if filename in copied_names:
+            continue
+        target = dst_root / scene / "hooks" / path.name
 
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(path, target)
         copied += 1
+        copied_names.add(filename)
     return copied
 
 
@@ -221,36 +230,33 @@ def _clean_global_target(global_root: Path) -> None:
 
 
 def _clean_template_hooks_target(hooks_root: Path) -> None:
-    shutil.rmtree(hooks_root, ignore_errors=True)
-    (hooks_root / "runtime").mkdir(parents=True, exist_ok=True)
-    (hooks_root / "governance").mkdir(parents=True, exist_ok=True)
+    for layer in ["global", "team", "project"]:
+        shutil.rmtree(hooks_root / layer / "hooks", ignore_errors=True)
+        (hooks_root / layer / "hooks").mkdir(parents=True, exist_ok=True)
 
 
 def _write_hooks_usage_doc(hooks_root: Path) -> None:
     content = """# Hooks Usage
 
-This directory stores generic hooks only.
+This directory stores hook templates split by reuse level.
 
 ## Layout
-- `runtime/`: runtime behavior hooks
-- `governance/`: governance and promotion related hooks
+- `global/`: low-coupling hooks with broad reuse
+- `team/`: team-level standards and process constraints
+- `project/`: project-specific runtime and platform-coupled hooks
 
 ## Selection Rules
-- Keep only low-coupling infrastructure hooks with broad reuse value.
-- Remove workflow-strategy hooks (for example: thinking-chain, search-tracker, phase-reminder, preflight-enforce, project-structure-enforce).
-- Remove platform-specific or tool-specific hooks.
-- New hooks should be reviewed before entering this directory.
+- Each hook filename must belong to exactly one folder.
+- Do not duplicate the same hook across multiple folders.
+- `global` is preferred when a hook is both reusable and low-coupling.
+- `team` is for shared team rules and process enforcement.
+- `project` is for hooks requiring project/runtime-specific context.
 
 ## Naming
 - Use kebab-case filenames ending with `.py`.
-- Place governance hooks under `governance/`, others under `runtime/`.
-
-## Current Generic Runtime Hooks
-- `context-guard.py`
-- `contract_utils.py`
-- `pre-compress-guard.py`
+- Keep one canonical hook file per filename.
 """
-    (hooks_root / "README.md").write_text(content, encoding="utf-8")
+    (hooks_root / "project" / "hooks" / "README.md").write_text(content, encoding="utf-8")
 
 
 def migrate_legacy_assets(
@@ -305,7 +311,7 @@ def migrate_legacy_assets(
     if not same_global_source_target:
         copied += _copy_tree_filtered(global_source_dir / "skills", global_root / "skills", _is_generic_skill_file)
         copied += _copy_tree_filtered(global_source_dir / "wiki", global_root / "wiki", _is_generic_wiki_file)
-    copied += _copy_generic_hooks(global_source_dir / "hooks", template_hooks)
+    copied += _copy_scene_hooks(global_source_dir / "hooks", template_hooks)
     for name in GLOBAL_ASSET_MAP:
         if name in {"skills", "wiki"}:
             continue

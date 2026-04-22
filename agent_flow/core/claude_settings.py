@@ -6,11 +6,11 @@ from pathlib import Path
 
 PROJECT_HOOK_COMMANDS: dict[str, list[str]] = {
     "PreToolUse": [
-        "python3 .agent-flow/hooks/governance/promotion-guard.py",
-        "python3 .agent-flow/hooks/runtime/pre-compress-guard.py",
+        "python3 .agent-flow/hooks/global/promotion-guard.py",
+        "python3 .agent-flow/hooks/global/pre-compress-guard.py",
     ],
     "PostToolUse": [
-        "python3 .agent-flow/hooks/runtime/context-guard.py",
+        "python3 .agent-flow/hooks/global/context-guard.py",
     ],
 }
 

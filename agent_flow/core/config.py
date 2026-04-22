@@ -17,8 +17,9 @@ GLOBAL_ASSET_DIRS = [
 
 TEAM_ASSET_DIRS = [
     "hooks",
-    "hooks/runtime",
-    "hooks/governance",
+    "hooks/global",
+    "hooks/team",
+    "hooks/project",
     "references",
     "skills",
     "souls",
@@ -28,8 +29,9 @@ TEAM_ASSET_DIRS = [
 
 PROJECT_DEFAULT_DIRS = [
     "hooks",
-    "hooks/runtime",
-    "hooks/governance",
+    "hooks/global",
+    "hooks/team",
+    "hooks/project",
     "skills",
     "souls",
     "wiki",
@@ -53,11 +55,11 @@ def resources_root(project_dir: Path | None = None) -> Path:
 
 def templates_hooks_root(project_dir: Path | None = None) -> Path:
     base = Path(project_dir).resolve() if project_dir else Path.cwd().resolve()
-    return base / "agent_flow" / "templates" / "hooks"
+    return base / "agent_flow" / "templates"
 
 
 def bundled_templates_hooks_root() -> Path:
-    return Path(__file__).resolve().parents[1] / "templates" / "hooks"
+    return Path(__file__).resolve().parents[1] / "templates"
 
 
 def team_root_base(project_dir: Path | None = None) -> Path:
@@ -101,21 +103,21 @@ def _has_files(root: Path) -> bool:
 
 def _resolve_template_hooks_source(project_dir: Path | None = None) -> Path:
     primary = templates_hooks_root(project_dir=project_dir)
-    if _has_files(primary):
+    if _has_files(primary / "global" / "hooks") or _has_files(primary / "team" / "hooks") or _has_files(primary / "project" / "hooks"):
         return primary
 
     bundled = bundled_templates_hooks_root()
-    if _has_files(bundled):
+    if _has_files(bundled / "global" / "hooks") or _has_files(bundled / "team" / "hooks") or _has_files(bundled / "project" / "hooks"):
         return bundled
     return primary
 
 
-def _sync_template_hooks_to_team(team_root: Path, project_dir: Path | None = None) -> None:
-    source = _resolve_template_hooks_source(project_dir=project_dir)
+def _sync_template_hooks_layer(source_root: Path, target_root: Path, layer: str) -> None:
+    source = source_root / layer / "hooks"
     if not source.exists():
         return
 
-    target = team_root / "hooks"
+    target = target_root / layer
     target.mkdir(parents=True, exist_ok=True)
 
     for src in sorted(source.rglob("*"), key=lambda p: str(p).lower()):
@@ -129,6 +131,17 @@ def _sync_template_hooks_to_team(team_root: Path, project_dir: Path | None = Non
             shutil.copy2(src, dst)
 
 
+def _sync_template_hooks_to_team(team_root: Path, project_dir: Path | None = None) -> None:
+    source = _resolve_template_hooks_source(project_dir=project_dir)
+    if not source.exists():
+        return
+
+    target = team_root / "hooks"
+    target.mkdir(parents=True, exist_ok=True)
+    _sync_template_hooks_layer(source_root=source, target_root=target, layer="global")
+    _sync_template_hooks_layer(source_root=source, target_root=target, layer="team")
+
+
 def _sync_template_hooks_to_project(project_root: Path, project_dir: Path | None = None) -> None:
     source = _resolve_template_hooks_source(project_dir=project_dir)
     if not source.exists():
@@ -136,16 +149,9 @@ def _sync_template_hooks_to_project(project_root: Path, project_dir: Path | None
 
     target = project_root / "hooks"
     target.mkdir(parents=True, exist_ok=True)
-
-    for src in sorted(source.rglob("*"), key=lambda p: str(p).lower()):
-        if not src.is_file():
-            continue
-        rel = src.relative_to(source)
-        dst = target / rel
-        dst.parent.mkdir(parents=True, exist_ok=True)
-        # Do not overwrite existing project hook files.
-        if not dst.exists():
-            shutil.copy2(src, dst)
+    _sync_template_hooks_layer(source_root=source, target_root=target, layer="global")
+    _sync_template_hooks_layer(source_root=source, target_root=target, layer="team")
+    _sync_template_hooks_layer(source_root=source, target_root=target, layer="project")
 
 
 def _resolve_global_asset_source(kind: str, global_root: Path) -> Path:
@@ -494,7 +500,7 @@ def _write_team_readme(team_root: Path, team_id: str, team_name: str) -> None:
 
 ## 目录说明
 
-- `hooks/`: 团队级 Hook（运行时与治理）
+- `hooks/`: 团队级 Hook（按 `global/team/project` 通用程度拆分）
 - `references/`: 团队共享参考资料
 - `skills/`: 团队共享技能；`ANCHOR.md` 记录全局技能锚点
 - `souls/`: 角色系统提示与职责定义
@@ -514,8 +520,9 @@ def _write_team_readme(team_root: Path, team_id: str, team_name: str) -> None:
 def init_global(project_dir: Path | None = None) -> Path:
     root = _ensure_layout(layer_root("global", project_dir=project_dir), GLOBAL_ASSET_DIRS)
     hooks_root = templates_hooks_root(project_dir=project_dir)
-    (hooks_root / "runtime").mkdir(parents=True, exist_ok=True)
-    (hooks_root / "governance").mkdir(parents=True, exist_ok=True)
+    (hooks_root / "global" / "hooks").mkdir(parents=True, exist_ok=True)
+    (hooks_root / "team" / "hooks").mkdir(parents=True, exist_ok=True)
+    (hooks_root / "project" / "hooks").mkdir(parents=True, exist_ok=True)
     (root / "config.yaml").write_text(yaml.safe_dump(GlobalConfig().model_dump(), sort_keys=False), encoding="utf-8")
     return root
 
@@ -805,7 +812,7 @@ def _write_project_readme(project_root: Path, project_name: str) -> None:
 
 ## 目录说明
 
-- `hooks/`: 项目级 Hook（运行时与治理）
+- `hooks/`: 项目级 Hook（按 `global/team/project` 通用程度拆分）
 - `references/`: 项目专属参考资料
 - `skills/`: 项目专属技能；`Index.md` 为技能索引
 - `souls/`: 项目专属角色定义
