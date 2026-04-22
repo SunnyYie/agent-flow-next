@@ -1,0 +1,27 @@
+auto_install:
+- git
+- docker
+- npm
+- pip
+- python3
+- node
+- gh
+- uv
+- curl
+- wget
+- jq
+- yq
+need_confirmation:
+- lark-cli
+- cargo
+- brew
+- apt-get
+- yum
+- pipx
+- npx
+- markitdown
+blacklist:
+- rm -rf /
+- mkfs
+- dd if=
+- format
