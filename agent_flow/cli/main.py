@@ -15,6 +15,7 @@ from agent_flow.core.config import (
     layer_root,
     team_root_base,
 )
+from agent_flow.core.claude_settings import ensure_project_claude_hooks
 from agent_flow.core.doctor import run_doctor
 from agent_flow.core.config import project_team_id
 from agent_flow.resources.resolver import ResourceResolver
@@ -363,3 +364,14 @@ def migrate_legacy_cmd(legacy_project: str, global_source: str, team_id: str, in
         include_project_knowledge=include_project_knowledge,
     )
     click.echo(report)
+
+
+@cli.group("hooks")
+def hooks_group() -> None:
+    pass
+
+
+@hooks_group.command("setup-claude")
+def hooks_setup_claude_cmd() -> None:
+    settings_path, added = ensure_project_claude_hooks(Path.cwd())
+    click.echo(f"{settings_path} (added {added} hooks)")

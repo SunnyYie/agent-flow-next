@@ -28,6 +28,7 @@ pip install -e .
 agent-flow --help
 agent-flow asset --help
 agent-flow promote --help
+agent-flow hooks --help
 ```
 
 ## 使用说明
@@ -156,6 +157,15 @@ agent-flow migrate-legacy \
   --team-id acme \
   --include-project-knowledge
 ```
+
+### 7. Claude Code 项目级 Hooks 配置
+
+```bash
+# 一键将 AgentFlow 项目 hooks 写入当前项目 .claude/settings.json
+agent-flow hooks setup-claude
+```
+
+该命令只会修改当前项目目录下的 `.claude/settings.json`，不会改动全局 `~/.claude/settings.json`，因此不会影响其他项目。
 
 ## 当前范围说明
 
