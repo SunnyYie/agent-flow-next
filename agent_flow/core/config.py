@@ -32,6 +32,10 @@ PROJECT_DEFAULT_DIRS = [
     "state",
 ]
 
+
+def bundled_resources_root() -> Path:
+    return Path(__file__).resolve().parents[1] / "resources"
+
 def resources_root(project_dir: Path | None = None) -> Path:
     import os
 
@@ -114,51 +118,172 @@ def _wiki_scene_summary(wiki_root: Path) -> list[tuple[str, int, list[Path]]]:
 def _build_skills_index(global_root: Path) -> str:
     skills_root = global_root / "skills"
     scenes = _skill_scene_summary(skills_root)
+    keys = _collect_global_skills(global_root)
+    used_fallback = False
+
+    if not scenes:
+        bundled_root = bundled_resources_root()
+        if bundled_root != global_root:
+            bundled_skills = bundled_root / "skills"
+            bundled_scenes = _skill_scene_summary(bundled_skills)
+            if bundled_scenes:
+                skills_root = bundled_skills
+                scenes = bundled_scenes
+                keys = _collect_global_skills(bundled_root)
+                used_fallback = True
+
+    scene_blurbs = {
+        "workflow": "任务流程控制、复杂度评估、阶段门控与验收",
+        "agent-orchestration": "多 Agent 编排、上下文预算与派发协议",
+        "knowledge": "知识检索、经验晋升与关键知识固化",
+        "development": "实现模式、TDD、审查与安全校验",
+        "git": "分支协作与变更提交流程",
+        "integration": "外部系统与平台集成流程",
+        "ai-optimization": "提示词、缓存与 AI 工作流优化",
+        "documentation": "文档转换、过滤与需求拆解",
+        "python": "Python 工程模式与配置治理",
+        "research": "源码/网络调研与工具前置检查",
+    }
+
+    def _first_match(prefix: str) -> str:
+        for k in keys:
+            if k.startswith(prefix):
+                return k
+        return ""
+
     lines = [
         "# Team Skills Index",
         "",
-        "This index is a high-level map of reusable global Agent-flow skills by scene.",
+        "This index summarizes reusable Agent-flow skills for fast lookup.",
         f"Global skills root: `{skills_root}`",
-        "",
-        "## Scenes",
     ]
+    if used_fallback:
+        lines.append("Source mode: bundled fallback (local global skills not found).")
+    lines.extend([
+        "",
+        "## Quick Routing",
+        "",
+        f"- 任务入口与规划: `{_first_match('workflow/pre-flight-check') or 'workflow/*'}`",
+        f"- 并行子 Agent 编排: `{_first_match('agent-orchestration/orchestrator-worker') or 'agent-orchestration/*'}`",
+        f"- 知识先行检索: `{_first_match('knowledge/knowledge-search') or 'knowledge/*'}`",
+        f"- 代码实现与测试: `{_first_match('development/code-implementation') or 'development/*'}`",
+        f"- 交付前质量与验收: `{_first_match('workflow/acceptance-check') or 'workflow/*'}`",
+        "",
+        "## Implemented Skill Domains",
+    ])
 
     if not scenes:
         lines.append("- No global skills found yet.")
         return "\n".join(lines) + "\n"
 
-    for scene, count, samples in scenes:
-        scene_path = skills_root / scene
-        lines.append(f"- [{scene}]({scene_path}) ({count} skills)")
-        for sample in samples:
+    for scene, count, _samples in scenes:
+        lines.append(f"- `{scene}` ({count}): {scene_blurbs.get(scene, '通用技能集合')}")
+
+    lines.extend([
+        "",
+        "## Scene Examples",
+    ])
+
+    for scene, _count, samples in scenes:
+        sample_keys = []
+        for sample in samples[:3]:
             rel = sample.relative_to(skills_root)
-            skill_name = rel.parts[-2] if len(rel.parts) >= 2 else rel.stem
-            lines.append(f"  - [{skill_name}]({sample})")
+            sample_keys.append("/".join(rel.parts[:-1]))
+        if sample_keys:
+            joined = ", ".join(f"`{k}`" for k in sample_keys)
+            lines.append(f"- `{scene}`: {joined}")
+
+    lines.extend([
+        "",
+        "## Notes For Agents",
+        "",
+        "- 先按 domain 路由，再定位具体 skill。",
+        "- 若多个 skill 同时适用，优先执行 workflow 相关 skill。",
+        "- 新增团队技能后，建议更新本索引。",
+    ])
     return "\n".join(lines) + "\n"
 
 
 def _build_wiki_index(global_root: Path) -> str:
     wiki_root = global_root / "wiki"
     scenes = _wiki_scene_summary(wiki_root)
+    docs = _collect_global_wiki(global_root)
+    doc_set = set(docs)
+    used_fallback = False
+
+    if not scenes:
+        bundled_root = bundled_resources_root()
+        if bundled_root != global_root:
+            bundled_wiki = bundled_root / "wiki"
+            bundled_scenes = _wiki_scene_summary(bundled_wiki)
+            if bundled_scenes:
+                wiki_root = bundled_wiki
+                scenes = bundled_scenes
+                docs = _collect_global_wiki(bundled_root)
+                doc_set = set(docs)
+                used_fallback = True
+
+    scene_blurbs = {
+        "patterns": "可复用的成功实践与流程模板",
+        "pitfalls": "已解决问题与常见踩坑记录",
+        "concepts": "核心概念与原则定义",
+        "decisions": "架构决策与治理规范",
+        "tools": "工具使用手册与参数指南",
+    }
+
+    def _prefer(paths: list[str], fallback: str) -> str:
+        for p in paths:
+            if p in doc_set:
+                return p
+        return fallback
+
     lines = [
         "# Team Wiki Index",
         "",
-        "This index is a high-level map of reusable global Agent-flow wiki knowledge by scene.",
+        "This index summarizes reusable Agent-flow wiki knowledge for fast lookup.",
         f"Global wiki root: `{wiki_root}`",
-        "",
-        "## Scenes",
     ]
+    if used_fallback:
+        lines.append("Source mode: bundled fallback (local global wiki not found).")
+    lines.extend([
+        "",
+        "## Quick Routing",
+        "",
+        "- 流程模式检索: `" + _prefer(["patterns/workflow/search-before-execute.md"], "patterns/workflow/*") + "`",
+        "- 架构与决策检索: `" + _prefer(["patterns/architecture/adr-decision-record.md"], "patterns/architecture/*") + "`",
+        "- 故障与踩坑排查: `" + _prefer(["pitfalls/workflow/execute-without-search.md"], "pitfalls/*") + "`",
+        "- 角色与记忆模型: `" + _prefer(["concepts/agent-roles.md", "concepts/memory-systems.md"], "concepts/*") + "`",
+        "- 安全相关基线: `" + _prefer(["concepts/permission-gradation.md", "pitfalls/security/path-traversal-bypass.md"], "security/*") + "`",
+        "",
+        "## Solved Wiki Domains",
+    ])
 
     if not scenes:
         lines.append("- No global wiki docs found yet.")
         return "\n".join(lines) + "\n"
 
-    for scene, count, samples in scenes:
-        scene_path = wiki_root / scene
-        lines.append(f"- [{scene}]({scene_path}) ({count} docs)")
-        for sample in samples:
-            rel = sample.relative_to(wiki_root)
-            lines.append(f"  - [{rel}]({sample})")
+    for scene, count, _samples in scenes:
+        lines.append(f"- `{scene}` ({count}): {scene_blurbs.get(scene, '通用知识文档集合')}")
+
+    lines.extend([
+        "",
+        "## Scene Examples",
+    ])
+
+    for scene, _count, samples in scenes:
+        rel_paths = [str(sample.relative_to(wiki_root)) for sample in samples[:3]]
+        if rel_paths:
+            joined = ", ".join(f"`{p}`" for p in rel_paths)
+            lines.append(f"- `{scene}`: {joined}")
+
+    lines.extend([
+        "",
+        "## Notes For Agents",
+        "",
+        "- 先定位场景（patterns/pitfalls/concepts），再进入具体页面。",
+        "- 大改动前先查 pitfalls，避免重复踩坑。",
+        "- 新增团队经验时，优先归档到对应场景文档。",
+    ])
     return "\n".join(lines) + "\n"
 
 
