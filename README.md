@@ -6,7 +6,7 @@ Three-layer AgentFlow implementation with unified assets, governance promotions,
 
 - 三层资源模型（`global / team / project`）初始化与路径解析
 - 团队绑定：项目绑定到指定 `team_id`
-- 团队型初始化：自动生成团队 `wiki/Index.md` 和 `skills/Index.md` 概要索引
+- 团队型初始化：自动生成团队目录（`<team_id>/`）、`readme.md`、`wiki/Index.md`、`skills/Index.md` 与 `skills/wiki` 锚点文档
 - 资源解析（overlay）：`project > team > global`，并支持治理 Hook 保护策略
 - 资源管理（通用）：`asset resolve/list/show/create/lint`
 - 团队信息（通用）：`team list/info`
@@ -44,7 +44,7 @@ agent-flow init --project
 # 初始化团队层
 agent-flow init --team --team-id acme
 
-# 初始化团队型 Agent-flow（包含 team 索引文档）
+# 初始化团队型 Agent-flow（包含 team 索引/锚点/readme）
 agent-flow init-team-flow --team-id acme --name "Acme Team"
 ```
 
@@ -56,7 +56,27 @@ agent-flow bind-team acme
 
 会把当前项目写入 `team_id` 绑定信息，用于资源解析时加载团队层。
 
-团队层默认生成路径：`~/.agent-flow/agent-flow-team/{team_id}/`（可通过 `AGENT_FLOW_TEAM_ROOT` 覆盖）。
+团队层默认生成路径：`{当前目录}/{team_id}/`（可通过 `AGENT_FLOW_TEAM_ROOT` 覆盖）。
+
+初始化时会默认创建以下结构（目录默认空，文档为引导与锚点）：
+
+```text
+{team_id}/
+├── hooks/
+│   ├── governance/
+│   └── runtime/
+├── references/
+├── skills/
+│   ├── ANCHOR.md
+│   └── Index.md
+├── souls/
+├── tools/
+├── wiki/
+│   ├── ANCHOR.md
+│   └── Index.md
+├── readme.md
+└── team.yaml
+```
 
 ### 3. 资源管理（asset）
 

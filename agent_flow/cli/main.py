@@ -290,19 +290,18 @@ def _resolve_team_root(project: Path, team_id: str) -> Path:
 
 @team_group.command("list")
 def team_list_cmd() -> None:
-    base = team_root_base()
+    base = team_root_base(project_dir=Path.cwd())
     if not base.exists():
         click.echo("no teams found")
         return
     rows: list[str] = []
     for team_dir in sorted((p for p in base.iterdir() if p.is_dir()), key=lambda p: p.name.lower()):
         team_yaml = team_dir / "team.yaml"
-        if team_yaml.exists():
-            data = yaml.safe_load(team_yaml.read_text(encoding="utf-8")) or {}
-            label = data.get("name") or team_dir.name
-            rows.append(f"{team_dir.name}\t{label}")
-        else:
-            rows.append(f"{team_dir.name}\t(team.yaml missing)")
+        if not team_yaml.exists():
+            continue
+        data = yaml.safe_load(team_yaml.read_text(encoding="utf-8")) or {}
+        label = data.get("name") or team_dir.name
+        rows.append(f"{team_dir.name}\t{label}")
     if not rows:
         click.echo("no teams found")
         return
