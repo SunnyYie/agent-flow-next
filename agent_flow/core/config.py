@@ -129,6 +129,25 @@ def _sync_template_hooks_to_team(team_root: Path, project_dir: Path | None = Non
             shutil.copy2(src, dst)
 
 
+def _sync_template_hooks_to_project(project_root: Path, project_dir: Path | None = None) -> None:
+    source = _resolve_template_hooks_source(project_dir=project_dir)
+    if not source.exists():
+        return
+
+    target = project_root / "hooks"
+    target.mkdir(parents=True, exist_ok=True)
+
+    for src in sorted(source.rglob("*"), key=lambda p: str(p).lower()):
+        if not src.is_file():
+            continue
+        rel = src.relative_to(source)
+        dst = target / rel
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        # Do not overwrite existing project hook files.
+        if not dst.exists():
+            shutil.copy2(src, dst)
+
+
 def _resolve_global_asset_source(kind: str, global_root: Path) -> Path:
     primary = global_root / kind
     if _has_files(primary):
@@ -497,37 +516,129 @@ def init_team_flow(team_id: str, name: str = "", project_dir: Path | None = None
     return init_team(team_id=team_id, name=name, project_dir=project_dir)
 
 
-def _build_project_skills_index() -> str:
+def _build_project_skills_index(project_root: Path) -> str:
+    skills_root = project_root / "skills"
+    scenes = _skill_scene_summary(skills_root)
+    keys: list[str] = []
+    for scene, _count, samples in scenes:
+        for sample in samples:
+            rel = sample.relative_to(skills_root)
+            keys.append("/".join(rel.parts[:-1]))
+
+    def _first_match(prefix: str) -> str:
+        for k in keys:
+            if k.startswith(prefix):
+                return k
+        return ""
+
     lines = [
         "# Project Skills Index",
         "",
-        "Project-specific skills that override or extend team/global skills.",
+        "This index summarizes project-local Agent-flow skills for fast lookup.",
+        f"Project skills root: `{skills_root}`",
+        "",
+        "## Quick Routing",
+        "",
+        f"- 任务入口与规划: `{_first_match('workflow/pre-flight-check') or 'workflow/*'}`",
+        f"- 并行子 Agent 编排: `{_first_match('agent-orchestration/orchestrator-worker') or 'agent-orchestration/*'}`",
+        f"- 知识先行检索: `{_first_match('knowledge/knowledge-search') or 'knowledge/*'}`",
+        f"- 代码实现与测试: `{_first_match('development/code-implementation') or 'development/*'}`",
+        f"- 交付前质量与验收: `{_first_match('workflow/acceptance-check') or 'workflow/*'}`",
+        "",
+        "## Implemented Skill Domains",
+    ]
+
+    if not scenes:
+        lines.append("- No project skills found yet.")
+    else:
+        for scene, count, _samples in scenes:
+            lines.append(f"- `{scene}` ({count}): 项目内自定义技能集合")
+
+    lines.extend([
+        "",
+        "## Scene Examples",
+    ])
+
+    for scene, _count, samples in scenes:
+        sample_keys = []
+        for sample in samples[:3]:
+            rel = sample.relative_to(skills_root)
+            sample_keys.append("/".join(rel.parts[:-1]))
+        if sample_keys:
+            joined = ", ".join(f"`{k}`" for k in sample_keys)
+            lines.append(f"- `{scene}`: {joined}")
+
+    lines.extend([
         "",
         "## Notes For Agents",
         "",
         "- Project skills take precedence over team and global skills.",
         "- Add project-specific workflows here.",
-    ]
+    ])
     return "\n".join(lines) + "\n"
 
 
-def _build_project_wiki_index() -> str:
+def _build_project_wiki_index(project_root: Path) -> str:
+    wiki_root = project_root / "wiki"
+    scenes = _wiki_scene_summary(wiki_root)
+    docs = set()
+    for _scene, _count, samples in scenes:
+        for sample in samples:
+            docs.add(str(sample.relative_to(wiki_root)))
+
+    def _prefer(paths: list[str], fallback: str) -> str:
+        for p in paths:
+            if p in docs:
+                return p
+        return fallback
+
     lines = [
         "# Project Wiki Index",
         "",
-        "Project-specific knowledge that overrides or extends team/global wiki.",
+        "This index summarizes project-local Agent-flow wiki knowledge for fast lookup.",
+        f"Project wiki root: `{wiki_root}`",
+        "",
+        "## Quick Routing",
+        "",
+        "- 流程模式检索: `" + _prefer(["patterns/workflow/search-before-execute.md"], "patterns/workflow/*") + "`",
+        "- 架构与决策检索: `" + _prefer(["patterns/architecture/adr-decision-record.md"], "patterns/architecture/*") + "`",
+        "- 故障与踩坑排查: `" + _prefer(["pitfalls/workflow/execute-without-search.md"], "pitfalls/*") + "`",
+        "- 角色与记忆模型: `" + _prefer(["concepts/agent-roles.md", "concepts/memory-systems.md"], "concepts/*") + "`",
+        "- 安全相关基线: `" + _prefer(["concepts/permission-gradation.md"], "security/*") + "`",
+        "",
+        "## Solved Wiki Domains",
+    ]
+
+    if not scenes:
+        lines.append("- No project wiki docs found yet.")
+    else:
+        for scene, count, _samples in scenes:
+            lines.append(f"- `{scene}` ({count}): 项目内自定义知识集合")
+
+    lines.extend([
+        "",
+        "## Scene Examples",
+    ])
+
+    for scene, _count, samples in scenes:
+        rel_paths = [str(sample.relative_to(wiki_root)) for sample in samples[:3]]
+        if rel_paths:
+            joined = ", ".join(f"`{p}`" for p in rel_paths)
+            lines.append(f"- `{scene}`: {joined}")
+
+    lines.extend([
         "",
         "## Notes For Agents",
         "",
         "- Project wiki takes precedence over team and global wiki.",
         "- Add project-specific pitfalls, patterns, and decisions here.",
-    ]
+    ])
     return "\n".join(lines) + "\n"
 
 
 def _write_project_index_docs(project_root: Path) -> None:
-    (project_root / "skills" / "Index.md").write_text(_build_project_skills_index(), encoding="utf-8")
-    (project_root / "wiki" / "Index.md").write_text(_build_project_wiki_index(), encoding="utf-8")
+    (project_root / "skills" / "Index.md").write_text(_build_project_skills_index(project_root), encoding="utf-8")
+    (project_root / "wiki" / "Index.md").write_text(_build_project_wiki_index(project_root), encoding="utf-8")
 
 
 def _write_project_readme(project_root: Path, project_name: str) -> None:
@@ -566,6 +677,7 @@ def init_project(project_dir: Path) -> Path:
     root = _ensure_layout(layer_root("project", project_dir=project_dir), PROJECT_DEFAULT_DIRS)
     cfg = ProjectConfig(name=Path(project_dir).resolve().name)
     (root / "config.yaml").write_text(yaml.safe_dump(cfg.model_dump(), sort_keys=False), encoding="utf-8")
+    _sync_template_hooks_to_project(project_root=root, project_dir=project_dir)
     soul_path = root / "souls" / "main.md"
     if not soul_path.exists():
         soul_path.write_text("", encoding="utf-8")
