@@ -52,7 +52,7 @@ def team_root_base() -> Path:
     env = os.getenv("AGENT_FLOW_TEAM_ROOT")
     if env:
         return Path(env).expanduser()
-    return Path.home() / ".agent-flow" / "teams"
+    return Path.home() / ".agent-flow" / "agent-flow-team"
 
 
 def layer_root(layer: str, project_dir: Path | None = None, team_id: str | None = None) -> Path:
