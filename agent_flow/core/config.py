@@ -57,7 +57,7 @@ def team_root_base() -> Path:
 
 def layer_root(layer: str, project_dir: Path | None = None, team_id: str | None = None) -> Path:
     if layer == "global":
-        return resources_root(project_dir) / "global"
+        return resources_root(project_dir)
     if layer == "team":
         if not team_id:
             raise ValueError("team_id is required for team layer")
