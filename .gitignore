@@ -1,2 +1,3 @@
 .agent-flow/
+tests/
 */*/__pycache__/
