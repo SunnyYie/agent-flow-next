@@ -75,6 +75,96 @@ def _ensure_layout(root: Path, dirs: list[str]) -> Path:
     return root
 
 
+def _skill_scene_summary(skills_root: Path) -> list[tuple[str, int, list[Path]]]:
+    scenes: list[tuple[str, int, list[Path]]] = []
+    if not skills_root.exists():
+        return scenes
+
+    for scene_dir in sorted((p for p in skills_root.iterdir() if p.is_dir()), key=lambda p: p.name.lower()):
+        skills = sorted(scene_dir.rglob("SKILL.md"), key=lambda p: str(p.relative_to(skills_root)).lower())
+        if not skills:
+            continue
+        scenes.append((scene_dir.name, len(skills), skills[:3]))
+    return scenes
+
+
+def _wiki_scene_summary(wiki_root: Path) -> list[tuple[str, int, list[Path]]]:
+    scenes: list[tuple[str, int, list[Path]]] = []
+    if not wiki_root.exists():
+        return scenes
+
+    ignored = {"index.md", "tag-index.md", ".wiki-schema.md"}
+    for scene_dir in sorted((p for p in wiki_root.iterdir() if p.is_dir()), key=lambda p: p.name.lower()):
+        docs = sorted(
+            (
+                p
+                for p in scene_dir.rglob("*.md")
+                if p.name.lower() not in ignored
+            ),
+            key=lambda p: str(p.relative_to(wiki_root)).lower(),
+        )
+        if not docs:
+            continue
+        scenes.append((scene_dir.name, len(docs), docs[:3]))
+    return scenes
+
+
+def _build_skills_index(global_root: Path) -> str:
+    skills_root = global_root / "skills"
+    scenes = _skill_scene_summary(skills_root)
+    lines = [
+        "# Team Skills Index",
+        "",
+        "This index is a high-level map of reusable global Agent-flow skills by scene.",
+        f"Global skills root: `{skills_root}`",
+        "",
+        "## Scenes",
+    ]
+
+    if not scenes:
+        lines.append("- No global skills found yet.")
+        return "\n".join(lines) + "\n"
+
+    for scene, count, samples in scenes:
+        scene_path = skills_root / scene
+        lines.append(f"- [{scene}]({scene_path}) ({count} skills)")
+        for sample in samples:
+            rel = sample.relative_to(skills_root)
+            skill_name = rel.parts[-2] if len(rel.parts) >= 2 else rel.stem
+            lines.append(f"  - [{skill_name}]({sample})")
+    return "\n".join(lines) + "\n"
+
+
+def _build_wiki_index(global_root: Path) -> str:
+    wiki_root = global_root / "wiki"
+    scenes = _wiki_scene_summary(wiki_root)
+    lines = [
+        "# Team Wiki Index",
+        "",
+        "This index is a high-level map of reusable global Agent-flow wiki knowledge by scene.",
+        f"Global wiki root: `{wiki_root}`",
+        "",
+        "## Scenes",
+    ]
+
+    if not scenes:
+        lines.append("- No global wiki docs found yet.")
+        return "\n".join(lines) + "\n"
+
+    for scene, count, samples in scenes:
+        scene_path = wiki_root / scene
+        lines.append(f"- [{scene}]({scene_path}) ({count} docs)")
+        for sample in samples:
+            rel = sample.relative_to(wiki_root)
+            lines.append(f"  - [{rel}]({sample})")
+    return "\n".join(lines) + "\n"
+
+
+def _write_team_index_docs(team_root: Path, global_root: Path) -> None:
+    (team_root / "skills" / "Index.md").write_text(_build_skills_index(global_root), encoding="utf-8")
+    (team_root / "wiki" / "Index.md").write_text(_build_wiki_index(global_root), encoding="utf-8")
+
+
 def init_global(project_dir: Path | None = None) -> Path:
     root = _ensure_layout(layer_root("global", project_dir=project_dir), GLOBAL_ASSET_DIRS)
     hooks_root = templates_hooks_root(project_dir=project_dir)
@@ -88,6 +178,13 @@ def init_team(team_id: str, name: str = "", project_dir: Path | None = None) -> 
     root = _ensure_layout(layer_root("team", team_id=team_id, project_dir=project_dir), TEAM_ASSET_DIRS)
     config = TeamConfig(team_id=team_id, name=name)
     (root / "team.yaml").write_text(yaml.safe_dump(config.model_dump(), sort_keys=False), encoding="utf-8")
+    return root
+
+
+def init_team_flow(team_id: str, name: str = "", project_dir: Path | None = None) -> Path:
+    root = init_team(team_id=team_id, name=name, project_dir=project_dir)
+    global_root = layer_root("global", project_dir=project_dir)
+    _write_team_index_docs(team_root=root, global_root=global_root)
     return root
 
 

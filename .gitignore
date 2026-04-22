@@ -1,3 +1,5 @@
 .agent-flow/
+.dev-workflow/
 tests/
+*/__pycache__/
 */*/__pycache__/
