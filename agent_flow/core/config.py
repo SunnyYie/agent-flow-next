@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 import yaml
@@ -51,6 +52,10 @@ def templates_hooks_root(project_dir: Path | None = None) -> Path:
     return base / "agent_flow" / "templates" / "hooks"
 
 
+def bundled_templates_hooks_root() -> Path:
+    return Path(__file__).resolve().parents[1] / "templates" / "hooks"
+
+
 def team_root_base(project_dir: Path | None = None) -> Path:
     import os
 
@@ -79,6 +84,45 @@ def _ensure_layout(root: Path, dirs: list[str]) -> Path:
     for rel in dirs:
         (root / rel).mkdir(parents=True, exist_ok=True)
     return root
+
+
+def _has_files(root: Path) -> bool:
+    if not root.exists():
+        return False
+    for p in root.rglob("*"):
+        if p.is_file():
+            return True
+    return False
+
+
+def _resolve_template_hooks_source(project_dir: Path | None = None) -> Path:
+    primary = templates_hooks_root(project_dir=project_dir)
+    if _has_files(primary):
+        return primary
+
+    bundled = bundled_templates_hooks_root()
+    if _has_files(bundled):
+        return bundled
+    return primary
+
+
+def _sync_template_hooks_to_team(team_root: Path, project_dir: Path | None = None) -> None:
+    source = _resolve_template_hooks_source(project_dir=project_dir)
+    if not source.exists():
+        return
+
+    target = team_root / "hooks"
+    target.mkdir(parents=True, exist_ok=True)
+
+    for src in sorted(source.rglob("*"), key=lambda p: str(p).lower()):
+        if not src.is_file():
+            continue
+        rel = src.relative_to(source)
+        dst = target / rel
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        # Do not overwrite existing team hook files.
+        if not dst.exists():
+            shutil.copy2(src, dst)
 
 
 def _skill_scene_summary(skills_root: Path) -> list[tuple[str, int, list[Path]]]:
@@ -403,6 +447,7 @@ def init_global(project_dir: Path | None = None) -> Path:
 
 def init_team(team_id: str, name: str = "", project_dir: Path | None = None) -> Path:
     root = _ensure_layout(layer_root("team", team_id=team_id, project_dir=project_dir), TEAM_ASSET_DIRS)
+    _sync_template_hooks_to_team(team_root=root, project_dir=project_dir)
     config = TeamConfig(team_id=team_id, name=name)
     (root / "team.yaml").write_text(yaml.safe_dump(config.model_dump(), sort_keys=False), encoding="utf-8")
     global_root = layer_root("global", project_dir=project_dir)
