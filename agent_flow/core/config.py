@@ -125,6 +125,36 @@ def _sync_template_hooks_to_team(team_root: Path, project_dir: Path | None = Non
             shutil.copy2(src, dst)
 
 
+def _resolve_global_asset_source(kind: str, global_root: Path) -> Path:
+    primary = global_root / kind
+    if _has_files(primary):
+        return primary
+
+    bundled = bundled_resources_root() / kind
+    if _has_files(bundled):
+        return bundled
+    return primary
+
+
+def _sync_global_asset_to_team(kind: str, team_root: Path, global_root: Path) -> None:
+    source = _resolve_global_asset_source(kind=kind, global_root=global_root)
+    if not source.exists():
+        return
+
+    target = team_root / kind
+    target.mkdir(parents=True, exist_ok=True)
+
+    for src in sorted(source.rglob("*"), key=lambda p: str(p).lower()):
+        if not src.is_file():
+            continue
+        rel = src.relative_to(source)
+        dst = target / rel
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        # Do not overwrite existing team asset files.
+        if not dst.exists():
+            shutil.copy2(src, dst)
+
+
 def _skill_scene_summary(skills_root: Path) -> list[tuple[str, int, list[Path]]]:
     scenes: list[tuple[str, int, list[Path]]] = []
     if not skills_root.exists():
@@ -448,9 +478,11 @@ def init_global(project_dir: Path | None = None) -> Path:
 def init_team(team_id: str, name: str = "", project_dir: Path | None = None) -> Path:
     root = _ensure_layout(layer_root("team", team_id=team_id, project_dir=project_dir), TEAM_ASSET_DIRS)
     _sync_template_hooks_to_team(team_root=root, project_dir=project_dir)
+    global_root = layer_root("global", project_dir=project_dir)
+    _sync_global_asset_to_team(kind="references", team_root=root, global_root=global_root)
+    _sync_global_asset_to_team(kind="souls", team_root=root, global_root=global_root)
     config = TeamConfig(team_id=team_id, name=name)
     (root / "team.yaml").write_text(yaml.safe_dump(config.model_dump(), sort_keys=False), encoding="utf-8")
-    global_root = layer_root("global", project_dir=project_dir)
     _write_team_index_docs(team_root=root, global_root=global_root)
     _write_team_anchor_docs(team_root=root, global_root=global_root)
     _write_team_readme(team_root=root, team_id=team_id, team_name=name)
