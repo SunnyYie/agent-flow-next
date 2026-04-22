@@ -413,6 +413,28 @@ def _collect_global_wiki(global_root: Path) -> list[str]:
     return keys
 
 
+def _collect_skill_keys_from_root(skills_root: Path | None) -> list[str]:
+    if not skills_root or not skills_root.exists():
+        return []
+    keys: list[str] = []
+    for p in sorted(skills_root.rglob("SKILL.md"), key=lambda x: str(x).lower()):
+        rel = p.relative_to(skills_root)
+        keys.append("/".join(rel.parts[:-1]))
+    return keys
+
+
+def _collect_wiki_docs_from_root(wiki_root: Path | None) -> list[str]:
+    if not wiki_root or not wiki_root.exists():
+        return []
+    ignored = {"index.md", "tag-index.md", ".wiki-schema.md"}
+    keys: list[str] = []
+    for p in sorted(wiki_root.rglob("*.md"), key=lambda x: str(x).lower()):
+        if p.name.lower() in ignored:
+            continue
+        keys.append(str(p.relative_to(wiki_root)))
+    return keys
+
+
 def _build_skills_anchor(global_root: Path) -> str:
     skills = _collect_global_skills(global_root)
     lines = [
@@ -516,26 +538,49 @@ def init_team_flow(team_id: str, name: str = "", project_dir: Path | None = None
     return init_team(team_id=team_id, name=name, project_dir=project_dir)
 
 
-def _build_project_skills_index(project_root: Path) -> str:
-    skills_root = project_root / "skills"
-    scenes = _skill_scene_summary(skills_root)
-    keys: list[str] = []
-    for scene, _count, samples in scenes:
-        for sample in samples:
-            rel = sample.relative_to(skills_root)
-            keys.append("/".join(rel.parts[:-1]))
+def _build_project_skills_index(project_root: Path, global_root: Path, team_root: Path | None = None) -> str:
+    project_skills_root = project_root / "skills"
+    team_skills_root = team_root / "skills" if team_root else None
+    global_skills_root = global_root / "skills"
+
+    project_scenes = _skill_scene_summary(project_skills_root)
+    team_scenes = _skill_scene_summary(team_skills_root) if team_skills_root else []
+    global_scenes = _skill_scene_summary(global_skills_root)
+
+    project_keys = _collect_skill_keys_from_root(project_skills_root)
+    team_keys = _collect_skill_keys_from_root(team_skills_root)
+    global_keys = _collect_global_skills(global_root)
+
+    used_fallback = False
+    if not global_scenes:
+        bundled_root = bundled_resources_root()
+        if bundled_root != global_root:
+            bundled_skills = bundled_root / "skills"
+            bundled_scenes = _skill_scene_summary(bundled_skills)
+            if bundled_scenes:
+                global_skills_root = bundled_skills
+                global_scenes = bundled_scenes
+                global_keys = _collect_global_skills(bundled_root)
+                used_fallback = True
 
     def _first_match(prefix: str) -> str:
-        for k in keys:
-            if k.startswith(prefix):
-                return k
+        for keys in (project_keys, team_keys, global_keys):
+            for k in keys:
+                if k.startswith(prefix):
+                    return k
         return ""
 
     lines = [
         "# Project Skills Index",
         "",
-        "This index summarizes project-local Agent-flow skills for fast lookup.",
-        f"Project skills root: `{skills_root}`",
+        "This index summarizes common/team/project Agent-flow skills for fast lookup.",
+        f"Project skills root: `{project_skills_root}`",
+        f"Team skills root: `{team_skills_root}`" if team_skills_root else "Team skills root: `(unbound)`",
+        f"Global skills root: `{global_skills_root}`",
+    ]
+    if used_fallback:
+        lines.append("Global source mode: bundled fallback (local global skills not found).")
+    lines.extend([
         "",
         "## Quick Routing",
         "",
@@ -545,13 +590,35 @@ def _build_project_skills_index(project_root: Path) -> str:
         f"- 代码实现与测试: `{_first_match('development/code-implementation') or 'development/*'}`",
         f"- 交付前质量与验收: `{_first_match('workflow/acceptance-check') or 'workflow/*'}`",
         "",
-        "## Implemented Skill Domains",
-    ]
+        "## Common Skill Domains",
+    ])
 
-    if not scenes:
+    if not global_scenes:
+        lines.append("- No common skills found yet.")
+    else:
+        for scene, count, _samples in global_scenes:
+            lines.append(f"- `{scene}` ({count}): 通用技能集合")
+
+    lines.extend([
+        "",
+        "## Team Skill Domains",
+    ])
+
+    if not team_scenes:
+        lines.append("- No team skills found yet.")
+    else:
+        for scene, count, _samples in team_scenes:
+            lines.append(f"- `{scene}` ({count}): 团队共享技能集合")
+
+    lines.extend([
+        "",
+        "## Project Skill Domains",
+    ])
+
+    if not project_scenes:
         lines.append("- No project skills found yet.")
     else:
-        for scene, count, _samples in scenes:
+        for scene, count, _samples in project_scenes:
             lines.append(f"- `{scene}` ({count}): 项目内自定义技能集合")
 
     lines.extend([
@@ -559,44 +626,86 @@ def _build_project_skills_index(project_root: Path) -> str:
         "## Scene Examples",
     ])
 
-    for scene, _count, samples in scenes:
-        sample_keys = []
+    for scene, _count, samples in global_scenes:
+        sample_keys: list[str] = []
         for sample in samples[:3]:
-            rel = sample.relative_to(skills_root)
+            rel = sample.relative_to(global_skills_root)
             sample_keys.append("/".join(rel.parts[:-1]))
         if sample_keys:
             joined = ", ".join(f"`{k}`" for k in sample_keys)
-            lines.append(f"- `{scene}`: {joined}")
+            lines.append(f"- common `{scene}`: {joined}")
+
+    for scene, _count, samples in team_scenes:
+        sample_keys: list[str] = []
+        for sample in samples[:3]:
+            rel = sample.relative_to(team_skills_root)  # type: ignore[arg-type]
+            sample_keys.append("/".join(rel.parts[:-1]))
+        if sample_keys:
+            joined = ", ".join(f"`{k}`" for k in sample_keys)
+            lines.append(f"- team `{scene}`: {joined}")
+
+    for scene, _count, samples in project_scenes:
+        sample_keys: list[str] = []
+        for sample in samples[:3]:
+            rel = sample.relative_to(project_skills_root)
+            sample_keys.append("/".join(rel.parts[:-1]))
+        if sample_keys:
+            joined = ", ".join(f"`{k}`" for k in sample_keys)
+            lines.append(f"- project `{scene}`: {joined}")
 
     lines.extend([
         "",
         "## Notes For Agents",
         "",
-        "- Project skills take precedence over team and global skills.",
+        "- Resolution priority: project > team > global.",
         "- Add project-specific workflows here.",
     ])
     return "\n".join(lines) + "\n"
 
 
-def _build_project_wiki_index(project_root: Path) -> str:
-    wiki_root = project_root / "wiki"
-    scenes = _wiki_scene_summary(wiki_root)
-    docs = set()
-    for _scene, _count, samples in scenes:
-        for sample in samples:
-            docs.add(str(sample.relative_to(wiki_root)))
+def _build_project_wiki_index(project_root: Path, global_root: Path, team_root: Path | None = None) -> str:
+    project_wiki_root = project_root / "wiki"
+    team_wiki_root = team_root / "wiki" if team_root else None
+    global_wiki_root = global_root / "wiki"
+
+    project_scenes = _wiki_scene_summary(project_wiki_root)
+    team_scenes = _wiki_scene_summary(team_wiki_root) if team_wiki_root else []
+    global_scenes = _wiki_scene_summary(global_wiki_root)
+
+    project_docs = set(_collect_wiki_docs_from_root(project_wiki_root))
+    team_docs = set(_collect_wiki_docs_from_root(team_wiki_root))
+    global_docs = set(_collect_global_wiki(global_root))
+
+    used_fallback = False
+    if not global_scenes:
+        bundled_root = bundled_resources_root()
+        if bundled_root != global_root:
+            bundled_wiki = bundled_root / "wiki"
+            bundled_scenes = _wiki_scene_summary(bundled_wiki)
+            if bundled_scenes:
+                global_wiki_root = bundled_wiki
+                global_scenes = bundled_scenes
+                global_docs = set(_collect_global_wiki(bundled_root))
+                used_fallback = True
 
     def _prefer(paths: list[str], fallback: str) -> str:
-        for p in paths:
-            if p in docs:
-                return p
+        for docs in (project_docs, team_docs, global_docs):
+            for p in paths:
+                if p in docs:
+                    return p
         return fallback
 
     lines = [
         "# Project Wiki Index",
         "",
-        "This index summarizes project-local Agent-flow wiki knowledge for fast lookup.",
-        f"Project wiki root: `{wiki_root}`",
+        "This index summarizes common/team/project Agent-flow wiki knowledge for fast lookup.",
+        f"Project wiki root: `{project_wiki_root}`",
+        f"Team wiki root: `{team_wiki_root}`" if team_wiki_root else "Team wiki root: `(unbound)`",
+        f"Global wiki root: `{global_wiki_root}`",
+    ]
+    if used_fallback:
+        lines.append("Global source mode: bundled fallback (local global wiki not found).")
+    lines.extend([
         "",
         "## Quick Routing",
         "",
@@ -606,13 +715,35 @@ def _build_project_wiki_index(project_root: Path) -> str:
         "- 角色与记忆模型: `" + _prefer(["concepts/agent-roles.md", "concepts/memory-systems.md"], "concepts/*") + "`",
         "- 安全相关基线: `" + _prefer(["concepts/permission-gradation.md"], "security/*") + "`",
         "",
-        "## Solved Wiki Domains",
-    ]
+        "## Common Wiki Domains",
+    ])
 
-    if not scenes:
+    if not global_scenes:
+        lines.append("- No common wiki docs found yet.")
+    else:
+        for scene, count, _samples in global_scenes:
+            lines.append(f"- `{scene}` ({count}): 通用知识文档集合")
+
+    lines.extend([
+        "",
+        "## Team Wiki Domains",
+    ])
+
+    if not team_scenes:
+        lines.append("- No team wiki docs found yet.")
+    else:
+        for scene, count, _samples in team_scenes:
+            lines.append(f"- `{scene}` ({count}): 团队共享知识集合")
+
+    lines.extend([
+        "",
+        "## Project Wiki Domains",
+    ])
+
+    if not project_scenes:
         lines.append("- No project wiki docs found yet.")
     else:
-        for scene, count, _samples in scenes:
+        for scene, count, _samples in project_scenes:
             lines.append(f"- `{scene}` ({count}): 项目内自定义知识集合")
 
     lines.extend([
@@ -620,25 +751,45 @@ def _build_project_wiki_index(project_root: Path) -> str:
         "## Scene Examples",
     ])
 
-    for scene, _count, samples in scenes:
-        rel_paths = [str(sample.relative_to(wiki_root)) for sample in samples[:3]]
+    for scene, _count, samples in global_scenes:
+        rel_paths = [str(sample.relative_to(global_wiki_root)) for sample in samples[:3]]
         if rel_paths:
             joined = ", ".join(f"`{p}`" for p in rel_paths)
-            lines.append(f"- `{scene}`: {joined}")
+            lines.append(f"- common `{scene}`: {joined}")
+
+    for scene, _count, samples in team_scenes:
+        rel_paths = [str(sample.relative_to(team_wiki_root)) for sample in samples[:3]]  # type: ignore[arg-type]
+        if rel_paths:
+            joined = ", ".join(f"`{p}`" for p in rel_paths)
+            lines.append(f"- team `{scene}`: {joined}")
+
+    for scene, _count, samples in project_scenes:
+        rel_paths = [str(sample.relative_to(project_wiki_root)) for sample in samples[:3]]
+        if rel_paths:
+            joined = ", ".join(f"`{p}`" for p in rel_paths)
+            lines.append(f"- project `{scene}`: {joined}")
 
     lines.extend([
         "",
         "## Notes For Agents",
         "",
-        "- Project wiki takes precedence over team and global wiki.",
+        "- Resolution priority: project > team > global.",
         "- Add project-specific pitfalls, patterns, and decisions here.",
     ])
     return "\n".join(lines) + "\n"
 
 
-def _write_project_index_docs(project_root: Path) -> None:
-    (project_root / "skills" / "Index.md").write_text(_build_project_skills_index(project_root), encoding="utf-8")
-    (project_root / "wiki" / "Index.md").write_text(_build_project_wiki_index(project_root), encoding="utf-8")
+def _write_project_index_docs(project_root: Path, global_root: Path, team_root: Path | None = None) -> None:
+    (project_root / "skills").mkdir(parents=True, exist_ok=True)
+    (project_root / "wiki").mkdir(parents=True, exist_ok=True)
+    (project_root / "skills" / "Index.md").write_text(
+        _build_project_skills_index(project_root, global_root, team_root),
+        encoding="utf-8",
+    )
+    (project_root / "wiki" / "Index.md").write_text(
+        _build_project_wiki_index(project_root, global_root, team_root),
+        encoding="utf-8",
+    )
 
 
 def _write_project_readme(project_root: Path, project_name: str) -> None:
@@ -675,13 +826,19 @@ def _write_project_readme(project_root: Path, project_name: str) -> None:
 
 def init_project(project_dir: Path) -> Path:
     root = _ensure_layout(layer_root("project", project_dir=project_dir), PROJECT_DEFAULT_DIRS)
-    cfg = ProjectConfig(name=Path(project_dir).resolve().name)
-    (root / "config.yaml").write_text(yaml.safe_dump(cfg.model_dump(), sort_keys=False), encoding="utf-8")
+    existing_data = {}
+    config_path = root / "config.yaml"
+    if config_path.exists():
+        existing_data = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+    cfg = ProjectConfig(name=Path(project_dir).resolve().name, team_id=existing_data.get("team_id", ""))
+    config_path.write_text(yaml.safe_dump(cfg.model_dump(), sort_keys=False), encoding="utf-8")
     _sync_template_hooks_to_project(project_root=root, project_dir=project_dir)
     soul_path = root / "souls" / "main.md"
     if not soul_path.exists():
         soul_path.write_text("", encoding="utf-8")
-    _write_project_index_docs(root)
+    global_root = layer_root("global", project_dir=project_dir)
+    team_root = layer_root("team", team_id=cfg.team_id, project_dir=project_dir) if cfg.team_id else None
+    _write_project_index_docs(root, global_root=global_root, team_root=team_root)
     _write_project_readme(root, cfg.name)
     return root
 
@@ -695,6 +852,9 @@ def bind_project_team(project_dir: Path, team_id: str) -> Path:
     data["team_id"] = team_id
     config_path.parent.mkdir(parents=True, exist_ok=True)
     config_path.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+    global_root = layer_root("global", project_dir=project_dir)
+    team_root = layer_root("team", team_id=team_id, project_dir=project_dir)
+    _write_project_index_docs(root, global_root=global_root, team_root=team_root)
     return config_path
 
 
