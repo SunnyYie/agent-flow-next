@@ -39,8 +39,8 @@ agent-flow hooks --help
 # 初始化全局层（默认在 agent_flow/resources/global）
 agent-flow init --global
 
-# 初始化项目层（当前目录下 .agent-flow）
-agent-flow init --project
+# 初始化项目层（当前目录下 .agent-flow，默认行为）
+agent-flow init
 
 # 初始化团队层
 agent-flow init --team --team-id acme
@@ -64,15 +64,8 @@ agent-flow bind-team acme
 ```text
 {team_id}/
 ├── hooks/
-│   ├── global/
-│   │   ├── runtime/
-│   │   └── governance/
-│   ├── team/
-│   │   ├── runtime/
-│   │   └── governance/
-│   └── project/
-│       ├── runtime/
-│       └── governance/
+│   ├── runtime/
+│   └── governance/
 ├── references/
 ├── skills/
 │   ├── ANCHOR.md
@@ -85,6 +78,19 @@ agent-flow bind-team acme
 ├── readme.md
 └── team.yaml
 ```
+
+项目初始化后 hooks 结构如下：
+
+```text
+.agent-flow/
+└── hooks/
+    ├── runtime/
+    └── governance/
+```
+
+Hook 模版来源（按场景）：
+- 团队初始化：`agent_flow/templates/team/hooks/*` -> `{team_id}/hooks/*`
+- 项目初始化：`agent_flow/templates/project/hooks/*` -> `.agent-flow/hooks/*`
 
 ### 3. 资源管理（asset）
 
@@ -171,6 +177,11 @@ agent-flow migrate-legacy \
 # 一键将 AgentFlow 项目 hooks 写入当前项目 .claude/settings.json
 agent-flow hooks setup-claude
 ```
+
+默认写入命令：
+- `python3 .agent-flow/hooks/governance/promotion-guard.py`
+- `python3 .agent-flow/hooks/runtime/pre-compress-guard.py`
+- `python3 .agent-flow/hooks/runtime/context-guard.py`
 
 该命令只会修改当前项目目录下的 `.claude/settings.json`，不会改动全局 `~/.claude/settings.json`，因此不会影响其他项目。
 

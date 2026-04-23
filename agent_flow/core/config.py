@@ -17,15 +17,8 @@ GLOBAL_ASSET_DIRS = [
 
 TEAM_ASSET_DIRS = [
     "hooks",
-    "hooks/global",
-    "hooks/global/runtime",
-    "hooks/global/governance",
-    "hooks/team",
-    "hooks/team/runtime",
-    "hooks/team/governance",
-    "hooks/project",
-    "hooks/project/runtime",
-    "hooks/project/governance",
+    "hooks/runtime",
+    "hooks/governance",
     "references",
     "skills",
     "souls",
@@ -142,9 +135,20 @@ def _sync_template_hooks_to_team(team_root: Path, project_dir: Path | None = Non
     if not source.exists():
         return
 
+    source_hooks = source / "team" / "hooks"
+    if not source_hooks.exists():
+        return
+
     target = team_root / "hooks"
     target.mkdir(parents=True, exist_ok=True)
-    _sync_template_hooks_layer(source_root=source, target_root=target, layer="team")
+    for src in sorted(source_hooks.rglob("*"), key=lambda p: str(p).lower()):
+        if not src.is_file():
+            continue
+        rel = src.relative_to(source_hooks)
+        dst = target / rel
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        if not dst.exists():
+            shutil.copy2(src, dst)
 
 
 def _sync_template_hooks_to_project(project_root: Path, project_dir: Path | None = None) -> None:
@@ -170,6 +174,12 @@ def _sync_template_hooks_to_project(project_root: Path, project_dir: Path | None
 
 def _prune_non_project_hook_scenes(project_root: Path) -> None:
     hooks_root = project_root / "hooks"
+    for scene in ["global", "team", "project"]:
+        shutil.rmtree(hooks_root / scene, ignore_errors=True)
+
+
+def _prune_non_team_hook_scenes(team_root: Path) -> None:
+    hooks_root = team_root / "hooks"
     for scene in ["global", "team", "project"]:
         shutil.rmtree(hooks_root / scene, ignore_errors=True)
 
@@ -549,6 +559,7 @@ def init_global(project_dir: Path | None = None) -> Path:
 
 def init_team(team_id: str, name: str = "", project_dir: Path | None = None) -> Path:
     root = _ensure_layout(layer_root("team", team_id=team_id, project_dir=project_dir), TEAM_ASSET_DIRS)
+    _prune_non_team_hook_scenes(team_root=root)
     _sync_template_hooks_to_team(team_root=root, project_dir=project_dir)
     global_root = layer_root("global", project_dir=project_dir)
     _sync_global_asset_to_team(kind="references", team_root=root, global_root=global_root)
