@@ -102,6 +102,9 @@ HOOK_SCENE_BY_NAME = {
     **{name: "team" for name in TEAM_STANDARD_HOOKS},
     **{name: "project" for name in PLATFORM_HOOKS},
 }
+HOOK_TYPE_BY_NAME = {
+    "promotion-guard.py": "governance",
+}
 
 
 def _copy_tree(src: Path, dst: Path) -> int:
@@ -213,7 +216,8 @@ def _copy_scene_hooks(src: Path, dst_root: Path) -> int:
             continue
         if filename in copied_names:
             continue
-        target = dst_root / scene / "hooks" / path.name
+        hook_type = HOOK_TYPE_BY_NAME.get(filename, "runtime")
+        target = dst_root / scene / "hooks" / hook_type / path.name
 
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(path, target)
@@ -232,25 +236,24 @@ def _clean_global_target(global_root: Path) -> None:
 def _clean_template_hooks_target(hooks_root: Path) -> None:
     for layer in ["global", "team", "project"]:
         shutil.rmtree(hooks_root / layer / "hooks", ignore_errors=True)
-        (hooks_root / layer / "hooks").mkdir(parents=True, exist_ok=True)
+        (hooks_root / layer / "hooks" / "runtime").mkdir(parents=True, exist_ok=True)
+        (hooks_root / layer / "hooks" / "governance").mkdir(parents=True, exist_ok=True)
 
 
 def _write_hooks_usage_doc(hooks_root: Path) -> None:
     content = """# Hooks Usage
 
-This directory stores hook templates split by reuse level.
+This scene stores hook templates split by hook type.
 
 ## Layout
-- `global/`: low-coupling hooks with broad reuse
-- `team/`: team-level standards and process constraints
-- `project/`: project-specific runtime and platform-coupled hooks
+- `runtime/`: runtime behavior hooks
+- `governance/`: governance and policy hooks
 
 ## Selection Rules
-- Each hook filename must belong to exactly one folder.
+- Each hook filename must belong to exactly one scene and one type folder.
 - Do not duplicate the same hook across multiple folders.
-- `global` is preferred when a hook is both reusable and low-coupling.
-- `team` is for shared team rules and process enforcement.
-- `project` is for hooks requiring project/runtime-specific context.
+- If a hook enforces governance/promotion policy, place it in `governance/`.
+- Other executable hooks go to `runtime/`.
 
 ## Naming
 - Use kebab-case filenames ending with `.py`.

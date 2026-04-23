@@ -18,8 +18,14 @@ GLOBAL_ASSET_DIRS = [
 TEAM_ASSET_DIRS = [
     "hooks",
     "hooks/global",
+    "hooks/global/runtime",
+    "hooks/global/governance",
     "hooks/team",
+    "hooks/team/runtime",
+    "hooks/team/governance",
     "hooks/project",
+    "hooks/project/runtime",
+    "hooks/project/governance",
     "references",
     "skills",
     "souls",
@@ -29,9 +35,9 @@ TEAM_ASSET_DIRS = [
 
 PROJECT_DEFAULT_DIRS = [
     "hooks",
-    "hooks/global",
-    "hooks/team",
     "hooks/project",
+    "hooks/project/runtime",
+    "hooks/project/governance",
     "skills",
     "souls",
     "wiki",
@@ -138,7 +144,6 @@ def _sync_template_hooks_to_team(team_root: Path, project_dir: Path | None = Non
 
     target = team_root / "hooks"
     target.mkdir(parents=True, exist_ok=True)
-    _sync_template_hooks_layer(source_root=source, target_root=target, layer="global")
     _sync_template_hooks_layer(source_root=source, target_root=target, layer="team")
 
 
@@ -147,11 +152,26 @@ def _sync_template_hooks_to_project(project_root: Path, project_dir: Path | None
     if not source.exists():
         return
 
+    source_hooks = source / "project" / "hooks"
+    if not source_hooks.exists():
+        return
+
     target = project_root / "hooks"
     target.mkdir(parents=True, exist_ok=True)
-    _sync_template_hooks_layer(source_root=source, target_root=target, layer="global")
-    _sync_template_hooks_layer(source_root=source, target_root=target, layer="team")
-    _sync_template_hooks_layer(source_root=source, target_root=target, layer="project")
+    for src in sorted(source_hooks.rglob("*"), key=lambda p: str(p).lower()):
+        if not src.is_file():
+            continue
+        rel = src.relative_to(source_hooks)
+        dst = target / rel
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        if not dst.exists():
+            shutil.copy2(src, dst)
+
+
+def _prune_non_project_hook_scenes(project_root: Path) -> None:
+    hooks_root = project_root / "hooks"
+    for scene in ["global", "team", "project"]:
+        shutil.rmtree(hooks_root / scene, ignore_errors=True)
 
 
 def _resolve_global_asset_source(kind: str, global_root: Path) -> Path:
@@ -520,9 +540,9 @@ def _write_team_readme(team_root: Path, team_id: str, team_name: str) -> None:
 def init_global(project_dir: Path | None = None) -> Path:
     root = _ensure_layout(layer_root("global", project_dir=project_dir), GLOBAL_ASSET_DIRS)
     hooks_root = templates_hooks_root(project_dir=project_dir)
-    (hooks_root / "global" / "hooks").mkdir(parents=True, exist_ok=True)
-    (hooks_root / "team" / "hooks").mkdir(parents=True, exist_ok=True)
-    (hooks_root / "project" / "hooks").mkdir(parents=True, exist_ok=True)
+    for scene in ["global", "team", "project"]:
+        (hooks_root / scene / "hooks" / "runtime").mkdir(parents=True, exist_ok=True)
+        (hooks_root / scene / "hooks" / "governance").mkdir(parents=True, exist_ok=True)
     (root / "config.yaml").write_text(yaml.safe_dump(GlobalConfig().model_dump(), sort_keys=False), encoding="utf-8")
     return root
 
@@ -833,6 +853,7 @@ def _write_project_readme(project_root: Path, project_name: str) -> None:
 
 def init_project(project_dir: Path) -> Path:
     root = _ensure_layout(layer_root("project", project_dir=project_dir), PROJECT_DEFAULT_DIRS)
+    _prune_non_project_hook_scenes(project_root=root)
     existing_data = {}
     config_path = root / "config.yaml"
     if config_path.exists():

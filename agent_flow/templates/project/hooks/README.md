@@ -1,13 +1,12 @@
-# Hooks Templates
+# Hooks Usage
 
-本目录按通用程度拆分 Hook 模版，且每个 Hook 只允许存在于一个目录下。
+本场景下的 Hook 按类型拆分。
 
 ## 目录
-- `global/`：通用、低耦合、可跨团队复用
-- `team/`：团队统一规范与流程约束
-- `project/`：项目/平台耦合能力，依赖项目上下文
+- `runtime/`：运行时行为 Hook
+- `governance/`：治理策略 Hook
 
 ## 约束
-- Hook 以文件名作为唯一标识（例如 `context-guard.py`）。
-- 同名 Hook 不允许出现在多个目录。
-- 新增 Hook 时必须先判断归属场景，再放入唯一目录。
+- 每个 Hook 只能在一个场景、一个类型目录中出现。
+- 治理类规则放 `governance/`，其余执行类 Hook 放 `runtime/`。
+- 文件名使用 kebab-case，并以 `.py` 结尾。
