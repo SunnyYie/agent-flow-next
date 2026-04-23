@@ -942,6 +942,14 @@ def _project_primary_skills_dir(project_dir: Path) -> Path:
     return project_dir / PROJECT_DIR_NAME / "skills"
 
 
+def project_primary_wiki_dir(project_dir: Path) -> Path:
+    return _project_primary_wiki_dir(project_dir)
+
+
+def project_primary_skills_dir(project_dir: Path) -> Path:
+    return _project_primary_skills_dir(project_dir)
+
+
 def _team_knowledge_dir(project_dir: Path) -> Path | None:
     team_id = project_team_id(project_dir)
     if not team_id:

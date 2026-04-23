@@ -96,7 +96,7 @@ class RecallManager:
         """
         if use_fts5:
             fts_results = self._search_via_fts5(query, limit)
-            if fts_results is not None:  # None = FTS5 unavailable, [] = no matches
+            if fts_results is not None and fts_results:
                 return fts_results
         return self._search_via_substring(query, limit)
 
