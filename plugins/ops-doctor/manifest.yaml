@@ -1,0 +1,9 @@
+api_version: 1
+name: ops-doctor
+version: 0.1.0
+description: Doctor diagnostics command migrated from core CLI
+namespace: ops-doctor
+commands:
+  - path: commands/doctor.py
+    name: doctor
+hooks: []

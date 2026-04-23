@@ -1,0 +1,43 @@
+api_version: 1
+name: workflow-guards
+version: 0.1.0
+description: Workflow guard hooks migrated from legacy agent-flow
+namespace: workflow-guards
+commands: []
+hooks:
+  - path: hooks/preflight-guard.py
+    event: UserPromptSubmit
+    matcher: ""
+  - path: hooks/self-questioning-enforce.py
+    event: UserPromptSubmit
+    matcher: ""
+  - path: hooks/user-acceptance-guard.py
+    event: UserPromptSubmit
+    matcher: ""
+  - path: hooks/parallel-enforce.py
+    event: UserPromptSubmit
+    matcher: ""
+  - path: hooks/preflight-enforce.py
+    event: PreToolUse
+    matcher: "Write|Edit|Bash"
+  - path: hooks/dev-workflow-enforce.py
+    event: PreToolUse
+    matcher: "Write|Edit|Bash"
+  - path: hooks/project-structure-enforce.py
+    event: PreToolUse
+    matcher: "Grep"
+  - path: hooks/thinking-chain-enforce.py
+    event: PreToolUse
+    matcher: "Write|Edit|Bash"
+  - path: hooks/subtask-guard-enforce.py
+    event: PreToolUse
+    matcher: "Write|Edit|Bash"
+  - path: hooks/search-tracker.py
+    event: PostToolUse
+    matcher: ""
+  - path: hooks/error-search-remind.py
+    event: PostToolUse
+    matcher: ""
+  - path: hooks/phase-reminder.py
+    event: PostToolUse
+    matcher: ""

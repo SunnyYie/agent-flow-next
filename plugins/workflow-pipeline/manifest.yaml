@@ -1,0 +1,24 @@
+api_version: 1
+name: workflow-pipeline
+version: 0.1.0
+description: Pipeline workflow plugin migrated from legacy agent-flow
+namespace: pipeline
+commands:
+  - path: commands/pipeline.py
+    name: pipeline
+    group: true
+  - path: commands/plan_review.py
+    name: plan-review
+  - path: commands/plan_eng_review.py
+    name: plan-eng-review
+  - path: commands/add_feature.py
+    name: add-feature
+  - path: commands/run.py
+    name: run
+  - path: commands/review.py
+    name: review
+  - path: commands/qa.py
+    name: qa
+  - path: commands/ship.py
+    name: ship
+hooks: []

@@ -1,0 +1,14 @@
+api_version: 1
+name: team-collaboration
+version: 0.1.0
+description: Team collaboration commands migrated from core CLI
+namespace: team-collaboration
+commands:
+  - path: commands/team.py
+    name: team
+    group: true
+  - path: commands/bind_team.py
+    name: bind-team
+  - path: commands/init_team_flow.py
+    name: init-team-flow
+hooks: []

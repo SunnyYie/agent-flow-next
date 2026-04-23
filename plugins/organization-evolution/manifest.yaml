@@ -1,0 +1,15 @@
+api_version: 1
+name: organization-evolution
+version: 0.1.0
+description: Asset and promotion workflows migrated from core CLI
+namespace: organization-evolution
+commands:
+  - path: commands/asset.py
+    name: asset
+    group: true
+  - path: commands/promote.py
+    name: promote
+    group: true
+  - path: commands/organize.py
+    name: organize
+hooks: []

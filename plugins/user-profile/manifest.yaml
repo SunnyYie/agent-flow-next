@@ -1,0 +1,10 @@
+api_version: 1
+name: user-profile
+version: 0.1.0
+description: User strategy plugin with native command implementations
+namespace: user-profile
+commands:
+  - path: commands/user.py
+    name: user
+    group: true
+hooks: []

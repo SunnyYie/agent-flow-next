@@ -1,0 +1,13 @@
+api_version: 1
+name: hermes-skillops
+version: 0.1.0
+description: Hermes and skill operations plugin with native command implementations
+namespace: hermes-skillops
+commands:
+  - path: commands/hermes.py
+    name: hermes
+    group: true
+  - path: commands/skill.py
+    name: skill
+    group: true
+hooks: []

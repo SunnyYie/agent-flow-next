@@ -63,13 +63,10 @@ GENERIC_WIKI_ALLOWLIST = {
 }
 GENERIC_HOOKS = {
     "context-guard.py",
-    "pre-compress-guard.py",
     "promotion-guard.py",
 }
 TEAM_STANDARD_HOOKS = {
     "contract_utils.py",
-    "agent-team-init.py",
-    "claude-md-bootstrap.py",
     "code-review-remind.py",
     "dev-workflow-enforce.py",
     "error-search-remind.py",
@@ -92,9 +89,7 @@ PLATFORM_HOOKS = {
     "agent-dispatch-enforce.py",
     "context-budget-tracker.py",
     "observation-recorder.py",
-    "session-end-recorder.py",
     "session-starter.py",
-    "startup-context.py",
 }
 
 HOOK_SCENE_BY_NAME = {

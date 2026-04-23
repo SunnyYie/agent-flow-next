@@ -1,0 +1,9 @@
+api_version: 1
+name: legacy-migration
+version: 0.1.0
+description: Legacy migration command migrated from core CLI
+namespace: legacy-migration
+commands:
+  - path: commands/migrate_legacy.py
+    name: migrate-legacy
+hooks: []

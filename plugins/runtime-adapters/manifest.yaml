@@ -1,0 +1,12 @@
+api_version: 1
+name: runtime-adapters
+version: 0.1.0
+description: Runtime hooks setup command migrated from core CLI
+namespace: runtime-adapters
+commands:
+  - path: commands/hooks.py
+    name: hooks
+    group: true
+  - path: commands/adapt.py
+    name: adapt
+hooks: []

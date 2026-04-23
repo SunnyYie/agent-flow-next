@@ -1,0 +1,12 @@
+api_version: 1
+name: memory-recall
+version: 0.1.0
+description: Memory and recall plugin with native command implementations
+namespace: memory-recall
+commands:
+  - path: commands/memory.py
+    name: memory
+    group: true
+  - path: commands/recall.py
+    name: recall
+hooks: []

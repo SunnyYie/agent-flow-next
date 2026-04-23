@@ -1,0 +1,9 @@
+api_version: 1
+name: builtin-demo
+version: 1.0.0
+description: Builtin demo plugin for smoke testing
+namespace: builtin-demo
+commands:
+  - path: commands/hello_builtin.py
+    name: hello-builtin
+hooks: []

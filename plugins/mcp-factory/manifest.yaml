@@ -1,0 +1,16 @@
+api_version: 1
+name: mcp-factory
+version: 0.1.0
+description: MCP factory plugin migrated from legacy agent-flow
+namespace: mcp-factory
+commands:
+  - path: commands/mcp_factory.py
+    name: mcp-factory
+    group: true
+hooks:
+  - path: hooks/implementation-clarification-guard.py
+    event: PreToolUse
+    matcher: "Write|Edit|MultiEdit|Bash|NotebookEdit"
+  - path: hooks/mcp-tool-factory-guard.py
+    event: PreToolUse
+    matcher: "Write|Edit|MultiEdit|Bash"
