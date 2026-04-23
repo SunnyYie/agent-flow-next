@@ -903,3 +903,87 @@ def project_team_id(project_dir: Path) -> str:
         return ""
     data = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
     return data.get("team_id", "")
+
+
+# ---------------------------------------------------------------------------
+# Legacy-compatible helpers for migrated core modules
+# ---------------------------------------------------------------------------
+
+GLOBAL_DIR = Path.home() / ".agent-flow"
+PROJECT_DIR_NAME = ".agent-flow"
+DEV_WORKFLOW_DIR_NAME = ".dev-workflow"
+
+DEFAULT_RECALL_INDEX = (
+    "# Recall Index (Cross-session Summaries)\n\n"
+    "## Recent Sessions\n"
+    "| Date | Task | Outcome | ID |\n"
+    "|------|------|---------|-----|\n"
+)
+
+
+def ensure_file(path: Path, content: str = "") -> Path:
+    if not path.exists():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+    return path
+
+
+def _project_primary_wiki_dir(project_dir: Path) -> Path:
+    dev_wiki = project_dir / DEV_WORKFLOW_DIR_NAME / "wiki"
+    if dev_wiki.is_dir():
+        return dev_wiki
+    return project_dir / PROJECT_DIR_NAME / "wiki"
+
+
+def _project_primary_skills_dir(project_dir: Path) -> Path:
+    dev_skills = project_dir / DEV_WORKFLOW_DIR_NAME / "skills"
+    if dev_skills.is_dir():
+        return dev_skills
+    return project_dir / PROJECT_DIR_NAME / "skills"
+
+
+def _team_knowledge_dir(project_dir: Path) -> Path | None:
+    team_id = project_team_id(project_dir)
+    if not team_id:
+        return None
+    return layer_root("team", team_id=team_id, project_dir=project_dir)
+
+
+def project_wiki_dirs(project_dir: Path, *, include_legacy: bool = True, include_team: bool = True) -> list[Path]:
+    roots: list[Path] = []
+    primary = _project_primary_wiki_dir(project_dir)
+    if primary.is_dir():
+        roots.append(primary)
+
+    if include_team:
+        team_root = _team_knowledge_dir(project_dir)
+        if team_root:
+            team_wiki = team_root / "wiki"
+            if team_wiki.is_dir() and team_wiki not in roots:
+                roots.append(team_wiki)
+
+    if include_legacy:
+        legacy = project_dir / PROJECT_DIR_NAME / "wiki"
+        if legacy.is_dir() and legacy not in roots:
+            roots.append(legacy)
+    return roots
+
+
+def project_skills_dirs(project_dir: Path, *, include_legacy: bool = True, include_team: bool = True) -> list[Path]:
+    roots: list[Path] = []
+    primary = _project_primary_skills_dir(project_dir)
+    if primary.is_dir():
+        roots.append(primary)
+
+    if include_team:
+        team_root = _team_knowledge_dir(project_dir)
+        if team_root:
+            team_skills = team_root / "skills"
+            if team_skills.is_dir() and team_skills not in roots:
+                roots.append(team_skills)
+
+    if include_legacy:
+        for legacy in [project_dir / PROJECT_DIR_NAME / "skills", project_dir / DEV_WORKFLOW_DIR_NAME / "skills"]:
+            if legacy.is_dir() and legacy not in roots:
+                roots.append(legacy)
+    return roots
