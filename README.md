@@ -10,7 +10,10 @@ Three-layer AgentFlow implementation with unified assets, governance promotions,
 - 资源解析（overlay）：`project > team > global`，并支持治理 Hook 保护策略
 - 资源管理（通用）：`asset resolve/list/show/create/lint`
 - 团队信息（通用）：`team list/info`
-- 晋升治理流程：`promote submit/review/ai-review/status/finalize`
+- 晋升治理流程（V1）：`promote submit/review/ai-review/status/finalize`
+  - 支持类型：`skill/wiki/hook`
+  - 支持路径：`project -> team -> global`（禁止跳级）
+  - 提案与审计存储：团队级目录（跨项目可见）
 - 健康检查：`doctor`（支持 `--json`）
 - 旧资产迁移：`migrate-legacy`
 
@@ -128,6 +131,13 @@ agent-flow team info --team-id acme
 
 ### 5. 晋升治理（promote）
 
+V1 规则：
+- 仅支持 `skill/wiki/hook`
+- 仅允许两条路径：`project -> team`、`team -> global`
+- `promote finalize` 会执行目标层复制并写团队审计日志
+- 目标层同名冲突时会 reject（不会覆盖）
+- `platform` 只是团队名称（例如 `--team-id platform`），不是独立 layer
+
 ```bash
 # 提交晋升提案
 agent-flow promote submit \
@@ -142,18 +152,21 @@ agent-flow promote submit \
 agent-flow promote review <proposal_id> \
   --reviewer alice \
   --role maintainer \
-  --decision approve \
+  --decision approved \
   --summary "looks good"
 
 # AI 审核
 agent-flow promote ai-review <proposal_id> \
   --profile reusable \
-  --decision approve \
+  --decision approved \
   --summary "generic enough"
 
 # 查看状态与最终落地
 agent-flow promote status <proposal_id>
 agent-flow promote finalize <proposal_id>
+
+# 可选：在 review/ai-review/status/finalize 指定 team 覆盖当前项目绑定
+agent-flow promote status <proposal_id> --team-id acme
 ```
 
 ### 6. 健康检查与迁移

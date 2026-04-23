@@ -1,11 +1,28 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Literal
 
 from pydantic import BaseModel, Field
 
 AssetKind = Literal["skill", "wiki", "reference", "tool", "hook", "soul"]
 ResourceLayer = Literal["global", "team", "project"]
+
+PROMOTABLE_KINDS_V1: set[str] = {"skill", "wiki", "hook"}
+
+VALID_PROMOTION_PATHS_V1: dict[str, set[tuple[str, str]]] = {
+    "skill": {("project", "team"), ("team", "global")},
+    "wiki": {("project", "team"), ("team", "global")},
+    "hook": {("project", "team"), ("team", "global")},
+}
+
+
+def is_promotable_kind_v1(kind: str) -> bool:
+    return kind in PROMOTABLE_KINDS_V1
+
+
+def is_valid_promotion_path_v1(kind: str, from_layer: str, to_layer: str) -> bool:
+    return (from_layer, to_layer) in VALID_PROMOTION_PATHS_V1.get(kind, set())
 
 
 class AssetMetadata(BaseModel):
@@ -49,6 +66,10 @@ class PromotionProposal(BaseModel):
     team_id: str
     source_path: str
     status: str = "pending"
+    target_path: str = ""
+    conflict_reason: str = ""
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    updated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 
 class HumanReviewRecord(BaseModel):
