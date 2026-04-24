@@ -7,6 +7,8 @@ import yaml
 
 from agent_flow.core.config import layer_root, project_team_id, team_root_base
 from agent_flow.resources.resolver import ResourceResolver
+from agent_flow.core.team import TeamConfig, TEAMS_DIR, ROLE_ADMIN, ROLE_MEMBER
+from agent_flow.core.team_sync import TeamSyncManager
 
 
 def _resolve_team_root(project: Path, team_id: str) -> Path:
@@ -14,6 +16,11 @@ def _resolve_team_root(project: Path, team_id: str) -> Path:
     if not resolved_team_id:
         raise click.ClickException("no team id provided and project has no team binding")
     return layer_root("team", team_id=resolved_team_id, project_dir=project)
+
+
+def _current_user() -> str:
+    import os
+    return os.environ.get("AGENT_FLOW_USER_ID") or os.environ.get("USER", "unknown")
 
 
 @click.group("team")
@@ -64,3 +71,47 @@ def info_cmd(team_id: str) -> None:
     click.echo(f"  tools: {len(resolved['tools'])}")
     click.echo(f"  hooks: {len(resolved['hooks'])}")
     click.echo(f"  souls: {len(resolved['souls'])}")
+
+    # Show sync status
+    resolved_id = data.get("team_id", root.name)
+    sync = TeamSyncManager(resolved_id)
+    status = sync.status()
+    if status.is_repo:
+        click.echo(f"sync: branch={status.branch}, ahead={status.ahead}, behind={status.behind}, dirty={status.dirty}")
+
+
+@cli.command("pull")
+@click.option("--team-id", default="", help="Team id; default uses project binding")
+def pull_cmd(team_id: str) -> None:
+    """Pull latest team knowledge from remote repository."""
+    project = Path.cwd()
+    resolved_id = team_id or project_team_id(project)
+    if not resolved_id:
+        raise click.ClickException("no team id provided and project has no team binding")
+
+    sync = TeamSyncManager(resolved_id)
+    result = sync.pull()
+    if result.success:
+        click.echo(f"Pulled: {result.message}")
+        if result.changed_files:
+            click.echo(f"  Changed files: {', '.join(result.changed_files[:10])}")
+    else:
+        click.echo(f"Pull failed: {result.message}")
+
+
+@cli.command("push")
+@click.option("--team-id", default="", help="Team id; default uses project binding")
+@click.option("--message", "-m", required=True, help="Commit message")
+def push_cmd(team_id: str, message: str) -> None:
+    """Push local team knowledge changes to remote repository."""
+    project = Path.cwd()
+    resolved_id = team_id or project_team_id(project)
+    if not resolved_id:
+        raise click.ClickException("no team id provided and project has no team binding")
+
+    sync = TeamSyncManager(resolved_id)
+    result = sync.push(message)
+    if result.success:
+        click.echo(f"Pushed: {result.message}")
+    else:
+        click.echo(f"Push failed: {result.message}")
