@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import json
+import os
 import shutil
+import sys
 from pathlib import Path
 
 import yaml
@@ -995,3 +998,211 @@ def project_skills_dirs(project_dir: Path, *, include_legacy: bool = True, inclu
             if legacy.is_dir() and legacy not in roots:
                 roots.append(legacy)
     return roots
+
+
+# ---------------------------------------------------------------------------
+# Runtime configuration helpers
+# ---------------------------------------------------------------------------
+
+PROJECT_CONFIG_NAME = "config.yaml"
+
+CLAUDE_PROJECT_COMMANDS = (
+    "plan-review",
+    "plan-eng-review",
+    "run",
+    "review",
+    "qa",
+    "ship",
+)
+
+
+def project_execution_commands(project_dir: Path) -> dict[str, list[str]]:
+    """Return configured executor/verifier commands for the project."""
+    config_path = project_dir / PROJECT_DIR_NAME / PROJECT_CONFIG_NAME
+    if not config_path.is_file():
+        return _maybe_add_builtin_executor({}, project_dir)
+
+    try:
+        data = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return _maybe_add_builtin_executor({}, project_dir)
+
+    execution = data.get("execution")
+    if not isinstance(execution, dict):
+        return _maybe_add_builtin_executor({}, project_dir)
+
+    commands: dict[str, list[str]] = {}
+    for key in ("executor_command", "verifier_command"):
+        value = execution.get(key)
+        if isinstance(value, list) and value and all(isinstance(part, str) for part in value):
+            commands[key] = value
+    return _maybe_add_builtin_executor(commands, project_dir)
+
+
+def project_native_executor_command(project_dir: Path) -> list[str]:
+    """Return an explicitly configured native executor bridge command, if any."""
+    config_path = project_dir / PROJECT_DIR_NAME / PROJECT_CONFIG_NAME
+    if not config_path.is_file():
+        return []
+
+    try:
+        data = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return []
+
+    execution = data.get("execution")
+    if not isinstance(execution, dict):
+        return []
+
+    value = execution.get("native_executor_command")
+    if isinstance(value, list) and value and all(isinstance(part, str) for part in value):
+        return value
+    return []
+
+
+def project_native_executor(project_dir: Path) -> str:
+    """Return the configured native executor shortcut, if any."""
+    config_path = project_dir / PROJECT_DIR_NAME / PROJECT_CONFIG_NAME
+    if not config_path.is_file():
+        return ""
+
+    try:
+        data = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return ""
+
+    execution = data.get("execution")
+    if not isinstance(execution, dict):
+        return ""
+
+    value = execution.get("native_executor")
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    return ""
+
+
+def project_runtime_backend(project_dir: Path) -> str:
+    """Return the configured runtime backend for auto-run stages."""
+    config_path = project_dir / PROJECT_DIR_NAME / PROJECT_CONFIG_NAME
+    if config_path.is_file():
+        try:
+            data = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+        except Exception:
+            data = {}
+
+        execution = data.get("execution")
+        if isinstance(execution, dict):
+            value = execution.get("runtime_backend")
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+
+    if _should_default_to_claude_native(project_dir):
+        return "claude-native"
+
+    return "command"
+
+
+def project_prefers_claude_native(project_dir: Path) -> bool:
+    """Return True when the project explicitly prefers Claude Code native runtime."""
+    return project_runtime_backend(project_dir) == "claude-native"
+
+
+def project_runtime_backends(project_dir: Path) -> set[str]:
+    """Return the configured runtime backends as a normalized set."""
+    raw_value = project_runtime_backend(project_dir)
+    separators = ["+", ",", " "]
+    values = [raw_value]
+    for separator in separators:
+        expanded: list[str] = []
+        for value in values:
+            expanded.extend(value.split(separator))
+        values = expanded
+
+    normalized = {value.strip() for value in values if value.strip()}
+    return normalized or {"command"}
+
+
+def _maybe_add_builtin_executor(
+    commands: dict[str, list[str]],
+    project_dir: Path,
+) -> dict[str, list[str]]:
+    """Auto-populate executor_command from LLM config when not explicitly set."""
+    if "executor_command" in commands:
+        return commands
+
+    if project_prefers_claude_native(project_dir):
+        return commands
+
+    if _auto_detect_disabled(project_dir):
+        return commands
+
+    try:
+        from agent_flow.executors.llm_config import resolve_llm_config
+
+        llm_config = resolve_llm_config(project_dir)
+        if llm_config is not None and llm_config.is_valid:
+            commands["executor_command"] = _builtin_executor_command()
+    except Exception:
+        pass
+
+    return commands
+
+
+def _auto_detect_disabled(project_dir: Path) -> bool:
+    """Return True when ``execution.auto_detect_llm`` is explicitly set to false."""
+    config_path = project_dir / PROJECT_DIR_NAME / PROJECT_CONFIG_NAME
+    if not config_path.is_file():
+        return False
+
+    try:
+        data = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return False
+
+    execution = data.get("execution")
+    if not isinstance(execution, dict):
+        return False
+
+    return execution.get("auto_detect_llm") is False
+
+
+def _builtin_executor_command() -> list[str]:
+    """Return the subprocess args for the built-in Anthropic executor."""
+    return [sys.executable, "-m", "agent_flow.executors.anthropic_executor"]
+
+
+def _should_default_to_claude_native(project_dir: Path) -> bool:
+    """Detect whether the project should default to claude-native runtime."""
+    if os.environ.get("CLAUDE_CODE") == "1":
+        return True
+
+    commands_dir = project_dir / ".claude" / "commands"
+    if commands_dir.is_dir():
+        for cmd_file in commands_dir.iterdir():
+            if cmd_file.suffix in (".md", ".txt") and "agent-flow" in cmd_file.name.lower():
+                return True
+
+    for settings_path in (
+        project_dir / ".claude" / "settings.json",
+        project_dir / ".claude" / "settings.local.json",
+    ):
+        if not settings_path.is_file():
+            continue
+        try:
+            data = json.loads(settings_path.read_text(encoding="utf-8"))
+            hooks = data.get("hooks", {})
+            if isinstance(hooks, dict) and hooks:
+                for _hook_type, hook_list in hooks.items():
+                    if not isinstance(hook_list, list):
+                        continue
+                    for entry in hook_list:
+                        try:
+                            command = entry["hooks"][0]["command"]
+                            if "agent-flow" in command or "agent_flow" in command:
+                                return True
+                        except (KeyError, IndexError, TypeError):
+                            continue
+        except (json.JSONDecodeError, OSError):
+            continue
+
+    return False
