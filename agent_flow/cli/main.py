@@ -5,9 +5,17 @@ from pathlib import Path
 import click
 
 from agent_flow.cli.plugin import plugin_group
-from agent_flow.core.config import init_global, init_project, init_team, project_team_id
+from agent_flow.core.config import (
+    TEAM_HOOKS_PROFILE_FULL,
+    TEAM_HOOKS_PROFILE_MINIMAL,
+    init_global,
+    init_project,
+    init_team,
+    project_team_id,
+)
 from agent_flow.core.plugin import ensure_default_builtin_plugins
 from agent_flow.core.plugin_loader import load_enabled_plugin_commands
+from agent_flow.core.plugin_selection import select_plugins_interactive
 from agent_flow.core.plugin_registry import PluginScope
 
 
@@ -40,23 +48,53 @@ def cli() -> None:
 @click.option("--team", "is_team", is_flag=True)
 @click.option("--project", "is_project", is_flag=True)
 @click.option("--team-id", default="")
-def init_cmd(is_global: bool, is_team: bool, is_project: bool, team_id: str) -> None:
+@click.option("--plugins", default="", help="Comma-separated builtin plugin names")
+@click.option(
+    "--hooks-profile",
+    type=click.Choice([TEAM_HOOKS_PROFILE_MINIMAL, TEAM_HOOKS_PROFILE_FULL]),
+    default=TEAM_HOOKS_PROFILE_MINIMAL,
+    show_default=True,
+    help="Team hook template profile for --team init",
+)
+def init_cmd(is_global: bool, is_team: bool, is_project: bool, team_id: str, plugins: str, hooks_profile: str) -> None:
+    try:
+        selected_plugins = (
+            select_plugins_interactive(plugin_names=[name.strip() for name in plugins.split(",") if name.strip()])
+            if plugins.strip()
+            else select_plugins_interactive()
+        )
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+
     if is_global:
         project = Path.cwd()
         click.echo(str(init_global(project_dir=project)))
-        ensure_default_builtin_plugins(scope=PluginScope.GLOBAL, project_dir=project)
+        ensure_default_builtin_plugins(
+            scope=PluginScope.GLOBAL,
+            project_dir=project,
+            selected_plugins=selected_plugins,
+        )
         return
     if is_team:
         if not team_id:
             raise click.ClickException("--team requires --team-id")
         project = Path.cwd()
-        click.echo(str(init_team(team_id, project_dir=project)))
-        ensure_default_builtin_plugins(scope=PluginScope.TEAM, project_dir=project, team_id=team_id)
+        click.echo(str(init_team(team_id, project_dir=project, hooks_profile=hooks_profile)))
+        ensure_default_builtin_plugins(
+            scope=PluginScope.TEAM,
+            project_dir=project,
+            team_id=team_id,
+            selected_plugins=selected_plugins,
+        )
         return
     # default project
     project = Path.cwd()
     click.echo(str(init_project(project)))
-    ensure_default_builtin_plugins(scope=PluginScope.PROJECT, project_dir=project)
+    ensure_default_builtin_plugins(
+        scope=PluginScope.PROJECT,
+        project_dir=project,
+        selected_plugins=selected_plugins,
+    )
 
 
 cli.add_command(plugin_group)

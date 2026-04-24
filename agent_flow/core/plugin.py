@@ -186,14 +186,19 @@ def ensure_default_builtin_plugins(
     scope: PluginScope,
     project_dir: Path,
     team_id: str = "",
+    selected_plugins: list[str] | None = None,
 ) -> list[str]:
     builtin_plugins = discover_builtin_plugins()
     if not builtin_plugins:
         return []
 
+    selected_set = set(selected_plugins) if selected_plugins is not None else None
+
     installed = PluginRegistry.load_scope(scope, project_dir=project_dir, team_id=team_id)
     added: list[str] = []
     for plugin_name, source_dir in sorted(builtin_plugins.items(), key=lambda item: item[0].lower()):
+        if selected_set is not None and plugin_name not in selected_set:
+            continue
         if plugin_name in installed:
             continue
         install_plugin(

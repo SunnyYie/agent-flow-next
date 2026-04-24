@@ -29,6 +29,16 @@ TEAM_ASSET_DIRS = [
     "wiki",
 ]
 
+TEAM_HOOKS_PROFILE_MINIMAL = "minimal"
+TEAM_HOOKS_PROFILE_FULL = "full"
+TEAM_HOOKS_PROFILES = {TEAM_HOOKS_PROFILE_MINIMAL, TEAM_HOOKS_PROFILE_FULL}
+
+MINIMAL_TEAM_HOOK_FILES = {
+    "runtime/contract_utils.py",
+    "runtime/project-init-guard.py",
+    "runtime/preflight-guard.py",
+}
+
 PROJECT_DEFAULT_DIRS = [
     "hooks",
     "hooks/project",
@@ -133,7 +143,14 @@ def _sync_template_hooks_layer(source_root: Path, target_root: Path, layer: str)
             shutil.copy2(src, dst)
 
 
-def _sync_template_hooks_to_team(team_root: Path, project_dir: Path | None = None) -> None:
+def _sync_template_hooks_to_team(
+    team_root: Path,
+    project_dir: Path | None = None,
+    hooks_profile: str = TEAM_HOOKS_PROFILE_MINIMAL,
+) -> None:
+    if hooks_profile not in TEAM_HOOKS_PROFILES:
+        raise ValueError(f"unknown hooks profile: {hooks_profile}")
+
     source = _resolve_template_hooks_source(project_dir=project_dir)
     if not source.exists():
         return
@@ -148,6 +165,10 @@ def _sync_template_hooks_to_team(team_root: Path, project_dir: Path | None = Non
         if not src.is_file():
             continue
         rel = src.relative_to(source_hooks)
+        if hooks_profile == TEAM_HOOKS_PROFILE_MINIMAL:
+            rel_key = rel.as_posix()
+            if rel_key not in MINIMAL_TEAM_HOOK_FILES and rel_key != "governance/.gitkeep":
+                continue
         dst = target / rel
         dst.parent.mkdir(parents=True, exist_ok=True)
         if not dst.exists():
@@ -560,10 +581,15 @@ def init_global(project_dir: Path | None = None) -> Path:
     return root
 
 
-def init_team(team_id: str, name: str = "", project_dir: Path | None = None) -> Path:
+def init_team(
+    team_id: str,
+    name: str = "",
+    project_dir: Path | None = None,
+    hooks_profile: str = TEAM_HOOKS_PROFILE_MINIMAL,
+) -> Path:
     root = _ensure_layout(layer_root("team", team_id=team_id, project_dir=project_dir), TEAM_ASSET_DIRS)
     _prune_non_team_hook_scenes(team_root=root)
-    _sync_template_hooks_to_team(team_root=root, project_dir=project_dir)
+    _sync_template_hooks_to_team(team_root=root, project_dir=project_dir, hooks_profile=hooks_profile)
     global_root = layer_root("global", project_dir=project_dir)
     _sync_global_asset_to_team(kind="references", team_root=root, global_root=global_root)
     _sync_global_asset_to_team(kind="souls", team_root=root, global_root=global_root)
@@ -575,8 +601,13 @@ def init_team(team_id: str, name: str = "", project_dir: Path | None = None) -> 
     return root
 
 
-def init_team_flow(team_id: str, name: str = "", project_dir: Path | None = None) -> Path:
-    return init_team(team_id=team_id, name=name, project_dir=project_dir)
+def init_team_flow(
+    team_id: str,
+    name: str = "",
+    project_dir: Path | None = None,
+    hooks_profile: str = TEAM_HOOKS_PROFILE_MINIMAL,
+) -> Path:
+    return init_team(team_id=team_id, name=name, project_dir=project_dir, hooks_profile=hooks_profile)
 
 
 def _build_project_skills_index(project_root: Path, global_root: Path, team_root: Path | None = None) -> str:

@@ -20,7 +20,17 @@ class PromotionManager:
     def _proposal_dir(self, proposal_id: str) -> Path:
         return self.promotions_dir / proposal_id
 
-    def _asset_target_path(self, kind: str, name: str, layer: str) -> Path:
+    @staticmethod
+    def _wiki_scene_from_source(source_path: Path) -> str:
+        parts = source_path.parts
+        if "wiki" in parts:
+            idx = parts.index("wiki")
+            rel_parent = Path(*parts[idx + 1 : -1])
+            if rel_parent.as_posix() not in {"", "."}:
+                return rel_parent.as_posix()
+        return "misc"
+
+    def _asset_target_path(self, kind: str, name: str, layer: str, source_path: Path | None = None) -> Path:
         if layer == "project":
             root = self.project_root
         elif layer == "team":
@@ -33,7 +43,17 @@ class PromotionManager:
         if kind == "skill":
             return root / "skills" / name / "SKILL.md"
         if kind == "wiki":
-            return root / "wiki" / f"{name}.md"
+            normalized = name.strip().strip("/")
+            if "/" in normalized:
+                scene_dir = str(Path(normalized).parent).strip("/")
+                filename = Path(normalized).name
+            else:
+                scene_dir = self._wiki_scene_from_source(source_path) if source_path is not None else "misc"
+                filename = normalized
+
+            if scene_dir in {"", "."}:
+                scene_dir = "misc"
+            return root / "wiki" / scene_dir / f"{filename}.md"
         if kind == "hook":
             return root / "hooks" / f"{name}.py"
         raise ValueError(f"unsupported promotion kind: {kind}")
@@ -52,7 +72,7 @@ class PromotionManager:
         if not source.exists() or not source.is_file():
             raise ValueError(f"source path does not exist: {source_path}")
 
-        target_path = self._asset_target_path(kind=kind, name=name, layer=to_layer)
+        target_path = self._asset_target_path(kind=kind, name=name, layer=to_layer, source_path=source)
         proposal_id = f"p-{uuid.uuid4().hex[:8]}"
         pdir = self._proposal_dir(proposal_id)
         (pdir / "snapshot").mkdir(parents=True, exist_ok=True)
