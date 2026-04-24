@@ -1,205 +1,279 @@
-# agent-flow-next
+# AgentFlow Next
 
-Three-layer AgentFlow implementation with unified assets, governance promotions, and migration tooling.
+AgentFlow Next 是一个“核心最小化 + 插件扩展”的多层工作流 CLI。
 
-## 已实现功能
+- 核心只负责：初始化、插件系统、动态命令加载
+- 业务能力由插件提供：pipeline、agent、memory、team、promote、runtime 等
+- 三层作用域：`global / team / project`
 
-- 三层资源模型（`global / team / project`）初始化与路径解析
-- 团队绑定：项目绑定到指定 `team_id`
-- 团队型初始化：自动生成团队目录（`<team_id>/`）、`readme.md`、`wiki/Index.md`、`skills/Index.md` 与 `skills/wiki` 锚点文档
-- 资源解析（overlay）：`project > team > global`，并支持治理 Hook 保护策略
-- 资源管理（通用）：`asset resolve/list/show/create/lint`
-- 团队信息（通用）：`team list/info`
-- 晋升治理流程（V1）：`promote submit/review/ai-review/status/finalize`
-  - 支持类型：`skill/wiki/hook`
-  - 支持路径：`project -> team -> global`（禁止跳级）
-  - 提案与审计存储：团队级目录（跨项目可见）
-- 健康检查：`doctor`（支持 `--json`）
-- 旧资产迁移：`migrate-legacy`
+---
 
-## 安装与运行
+## 从 0 到 1 快速上手
 
-### 本地开发安装
+### 1. 安装
 
 ```bash
+cd /Users/sunyi/ai/agent-flow-team
 pip install -e .
-```
-
-### 查看命令
-
-```bash
 agent-flow --help
-agent-flow asset --help
-agent-flow promote --help
-agent-flow hooks --help
 ```
 
-## 使用说明
-
-### 1. 初始化
+### 2. 初始化 Global（机器级）
 
 ```bash
-# 初始化全局层（默认在 agent_flow/resources/global）
 agent-flow init --global
-
-# 初始化项目层（当前目录下 .agent-flow，默认行为）
-agent-flow init
-
-# 初始化团队层
-agent-flow init --team --team-id acme
-
-# 初始化团队型 Agent-flow（包含 team 索引/锚点/readme）
-agent-flow init-team-flow --team-id acme --name "Acme Team"
 ```
 
-### 2. 绑定团队
+这会初始化全局层，并自动安装内置插件到 global scope。
+
+### 3. 初始化 Team（团队级）
 
 ```bash
+# 在你的团队根目录执行
+agent-flow init --team --team-id acme
+```
+
+默认 team 路径：
+- `${AGENT_FLOW_TEAM_ROOT:-当前目录}/acme/.agent-flow/`
+
+如果希望固定团队根目录：
+
+```bash
+export AGENT_FLOW_TEAM_ROOT=/path/to/team-root
+agent-flow init --team --team-id acme
+```
+
+### 4. 初始化 Project（项目级）
+
+```bash
+cd /path/to/your-project
+agent-flow init
+```
+
+这会创建项目 `.agent-flow/` 并自动安装 project scope 内置插件。
+
+### 5. 绑定项目到团队（可选但推荐）
+
+```bash
+cd /path/to/your-project
 agent-flow bind-team acme
 ```
 
-会把当前项目写入 `team_id` 绑定信息，用于资源解析时加载团队层。
+绑定后资源解析优先级：`project > team > global`。
 
-团队层默认生成路径：`{当前目录}/{team_id}/`（可通过 `AGENT_FLOW_TEAM_ROOT` 覆盖）。
+---
 
-初始化时会默认创建以下结构（目录默认空，文档为引导与锚点）：
-
-```text
-{team_id}/
-├── hooks/
-│   ├── runtime/
-│   └── governance/
-├── references/
-├── skills/
-│   ├── ANCHOR.md
-│   └── Index.md
-├── souls/
-├── tools/
-├── wiki/
-│   ├── ANCHOR.md
-│   └── Index.md
-├── readme.md
-└── team.yaml
-```
-
-项目初始化后 hooks 结构如下：
-
-```text
-.agent-flow/
-└── hooks/
-    ├── runtime/
-    └── governance/
-```
-
-Hook 模版来源（按场景）：
-- 团队初始化：`agent_flow/templates/team/hooks/*` -> `{team_id}/hooks/*`
-- 项目初始化：`agent_flow/templates/project/hooks/*` -> `.agent-flow/hooks/*`
-
-### 3. 资源管理（asset）
+## 初始化后如何检查
 
 ```bash
-# 查看各类资源解析数量
-agent-flow asset resolve
+# 查看生效插件（effective view）
+agent-flow plugin list
 
-# 列出资源（支持 kind/layer 过滤）
-agent-flow asset list --kind all --layer all
-agent-flow asset list --kind skills --layer project
+# 查看所有命令（会包含动态插件命令）
+agent-flow --help
 
-# 查看单个资源
-agent-flow asset show --kind wiki --name concepts/agent-roles
-
-# 创建资源
-agent-flow asset create --kind wiki --name concepts/new-doc --layer project
-agent-flow asset create --kind skills --name workflow/new-skill --layer team --team-id acme
-
-# 资源检查
-agent-flow asset lint
-agent-flow asset lint --json
-```
-
-`asset create` 支持的 `kind`：`skills/wiki/references/tools/hooks/souls`。
-
-### 4. 团队信息（team）
-
-```bash
-# 列出本机所有团队目录
-agent-flow team list
-
-# 查看团队信息
-agent-flow team info --team-id acme
-```
-
-### 5. 晋升治理（promote）
-
-V1 规则：
-- 仅支持 `skill/wiki/hook`
-- 仅允许两条路径：`project -> team`、`team -> global`
-- `promote finalize` 会执行目标层复制并写团队审计日志
-- 目标层同名冲突时会 reject（不会覆盖）
-- `platform` 只是团队名称（例如 `--team-id platform`），不是独立 layer
-
-```bash
-# 提交晋升提案
-agent-flow promote submit \
-  --kind skill \
-  --name workflow/new-skill \
-  --from-layer project \
-  --to-layer team \
-  --team-id acme \
-  --source-path .agent-flow/skills/workflow/new-skill/SKILL.md
-
-# 人工审核
-agent-flow promote review <proposal_id> \
-  --reviewer alice \
-  --role maintainer \
-  --decision approved \
-  --summary "looks good"
-
-# AI 审核
-agent-flow promote ai-review <proposal_id> \
-  --profile reusable \
-  --decision approved \
-  --summary "generic enough"
-
-# 查看状态与最终落地
-agent-flow promote status <proposal_id>
-agent-flow promote finalize <proposal_id>
-
-# 可选：在 review/ai-review/status/finalize 指定 team 覆盖当前项目绑定
-agent-flow promote status <proposal_id> --team-id acme
-```
-
-### 6. 健康检查与迁移
-
-```bash
 # 健康检查
+agent-flow doctor
+```
+
+---
+
+## 插件系统使用
+
+## 作用域
+
+- `project`：当前项目生效
+- `team`：指定团队生效（需 `--team-id`）
+- `global`：当前机器生效
+
+## 安装插件
+
+### 1) 安装内置插件
+
+```bash
+# project scope
+agent-flow plugin install workflow-pipeline --scope project --source builtin:workflow-pipeline
+
+# team scope
+agent-flow plugin install workflow-pipeline --scope team --team-id acme --source builtin:workflow-pipeline
+
+# global scope
+agent-flow plugin install workflow-pipeline --scope global --source builtin:workflow-pipeline
+```
+
+### 2) 安装本地插件
+
+```bash
+agent-flow plugin install my-plugin --scope project --source local:./plugins/my-plugin
+```
+
+## 启用/禁用插件
+
+```bash
+agent-flow plugin disable workflow-pipeline --scope project
+agent-flow plugin enable workflow-pipeline --scope project
+```
+
+> 禁用后：命令不可见、插件 hooks 从项目 `.claude/settings.json` 移除。
+
+## 卸载插件
+
+```bash
+agent-flow plugin uninstall workflow-pipeline --scope project
+```
+
+## 更新插件（当前版本）
+
+当前 CLI 还没有独立 `plugin update` 子命令。推荐更新流程：
+
+1. `plugin uninstall`
+2. `plugin install`（重新安装目标版本/来源）
+
+例如：
+
+```bash
+agent-flow plugin uninstall workflow-pipeline --scope project
+agent-flow plugin install workflow-pipeline --scope project --source builtin:workflow-pipeline
+```
+
+## 查看插件列表
+
+```bash
+# 生效视图（project > team > global）
+agent-flow plugin list
+
+# 仅看已启用
+agent-flow plugin list --enabled-only
+```
+
+---
+
+## 常用 CLI 命令
+
+> 下面命令由插件动态提供；若提示不存在，先执行 `agent-flow init` 和 `agent-flow plugin list` 检查安装状态。
+
+## 初始化与插件
+
+```bash
+agent-flow init [--global|--team --team-id <id>]
+agent-flow plugin --help
+```
+
+## 团队与协作
+
+```bash
+agent-flow team list
+agent-flow team info
+agent-flow bind-team <team-id>
+agent-flow init-team-flow --team-id <team-id> --name "Team Name"
+```
+
+## 资源管理与治理
+
+```bash
+agent-flow asset resolve
+agent-flow asset list --kind all --layer all
+agent-flow asset create --kind wiki --name concepts/new-doc --layer project
+
+agent-flow promote submit --kind skill --name demo --from-layer project --to-layer team --team-id acme --source-path <path>
+agent-flow promote review <proposal_id> --reviewer alice --role maintainer --decision approved --summary "ok"
+agent-flow promote finalize <proposal_id>
+```
+
+## Pipeline 工作流
+
+```bash
+agent-flow plan-review --spec spec.md
+agent-flow plan-eng-review --spec spec.md
+agent-flow add-feature payment-flow
+agent-flow run --tasks 1,2
+agent-flow review
+agent-flow qa
+agent-flow ship
+
+agent-flow pipeline status
+agent-flow pipeline run --to-stage qa
+agent-flow pipeline resume --from-stage run
+```
+
+## Agent / Memory / User / Hermes
+
+```bash
+agent-flow agent list
+agent-flow agent spawn --role executor --task "Implement T1"
+agent-flow agent sync
+
+agent-flow memory index
+agent-flow memory search --query "feature flag"
+agent-flow recall --query "payments"
+
+agent-flow user show
+agent-flow user set-autonomy 4
+
+agent-flow skill list
+agent-flow skill create --name payments-pattern --trigger payments --procedure "..."
+agent-flow hermes status
+```
+
+## Runtime 适配
+
+```bash
+agent-flow adapt --platform claude-code
+agent-flow hooks setup-claude
+agent-flow hooks inject-context --target claude-hook
+```
+
+## 诊断与迁移
+
+```bash
 agent-flow doctor
 agent-flow doctor --json
 
-# 迁移旧仓库资产
-agent-flow migrate-legacy \
-  --legacy-project /path/to/legacy-project \
-  --global-source /path/to/legacy-global \
-  --team-id acme \
-  --include-project-knowledge
+agent-flow migrate-legacy --legacy-project /path/to/legacy --global-source /path/to/global --team-id acme --include-project-knowledge
 ```
 
-### 7. Claude Code 项目级 Hooks 配置
+---
 
-```bash
-# 一键将 AgentFlow 项目 hooks 写入当前项目 .claude/settings.json
-agent-flow hooks setup-claude
-```
+## 当前内置插件
 
-默认写入命令：
-- `python3 .agent-flow/hooks/governance/promotion-guard.py`
-- `python3 .agent-flow/hooks/runtime/pre-compress-guard.py`
-- `python3 .agent-flow/hooks/runtime/context-guard.py`
+- `workflow-pipeline`
+- `workflow-guards`
+- `agent-orchestration`
+- `memory-recall`
+- `user-profile`
+- `hermes-skillops`
+- `runtime-adapters`
+- `team-collaboration`
+- `organization-evolution`
+- `mcp-factory`
+- `ops-doctor`
+- `legacy-migration`
 
-该命令只会修改当前项目目录下的 `.claude/settings.json`，不会改动全局 `~/.claude/settings.json`，因此不会影响其他项目。
+---
 
-## 当前范围说明
+## 排障建议
 
-当前仓库聚焦“通用能力”：三层资源、团队基础、资产管理、治理晋升、迁移与检查。
+### 命令不存在
 
-以下旧版能力未纳入当前通用范围：`pipeline/run/review/qa/ship`、`agent`、`user`、`memory/recall`、`hermes`、`adapt` 等运行时或平台耦合功能。
+1. 执行 `agent-flow init`
+2. 执行 `agent-flow plugin list`
+3. 确认目标插件为 `enabled`
+
+### team scope 报错需要 team_id
+
+- 使用 `--team-id <id>`
+- 或先在项目中 `agent-flow bind-team <id>`
+
+### Hook 没生效
+
+- 检查项目 `.claude/settings.json`
+- 重新 `agent-flow plugin disable/enable <plugin> --scope project`
+
+---
+
+## 设计原则
+
+- 核心稳定，能力插件化
+- scope 隔离，按优先级覆盖
+- 配置可审计，状态可回放
+- 兼容迁移，逐步替换旧 CLI 能力
