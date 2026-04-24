@@ -28,6 +28,8 @@ _STAGE_TO_AGENT: dict[str, str] = {
 
 @dataclass
 class NativeAgentDefinition:
+    """A discovered Claude-native agent definition from ~/.claude/agents/."""
+
     name: str
     path: Path
     content: str
@@ -108,6 +110,7 @@ class NativeAgentLifecycleManager:
         self._save(state)
 
     def _load(self) -> dict:
+        """Load lifecycle state from disk."""
         if not self.path.is_file():
             return {"agents": {}}
         try:
@@ -116,12 +119,15 @@ class NativeAgentLifecycleManager:
             return {"agents": {}}
 
     def _save(self, state: dict) -> None:
+        """Persist lifecycle state to disk."""
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.path.write_text(json.dumps(state, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
 @dataclass
 class NativeExecutorResolution:
+    """Resolved native executor bridge configuration."""
+
     mode: str
     command: list[str]
     source: str
@@ -197,6 +203,7 @@ def resolve_native_executor(project_dir: Path) -> NativeExecutorResolution | Non
 
 
 def _parse_agent_metadata(content: str) -> dict[str, object]:
+    """Parse YAML frontmatter from an agent definition file."""
     if not content.startswith("---"):
         return {}
     try:
@@ -213,6 +220,7 @@ def _parse_agent_metadata(content: str) -> dict[str, object]:
 
 
 def _normalize_stage_list(raw_value: object) -> list[str]:
+    """Normalize a stage list value from agent metadata into a list of strings."""
     if isinstance(raw_value, list):
         return [str(item).strip() for item in raw_value if str(item).strip()]
     if isinstance(raw_value, str) and raw_value.strip():

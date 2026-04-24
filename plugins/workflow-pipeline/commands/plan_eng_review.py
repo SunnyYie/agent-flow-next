@@ -4,30 +4,25 @@ from datetime import datetime
 from pathlib import Path
 
 import click
-import yaml
 
-
-def _state_path(project: Path) -> Path:
-    return project / ".agent-flow" / "state" / "pipeline-state.yaml"
-
-
-def _complete(project: Path, stage: str) -> None:
-    path = _state_path(project)
-    if path.exists():
-        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    else:
-        data = {"stages": {}}
-    stages = data.setdefault("stages", {})
-    stages[stage] = "completed"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+from agent_flow.core.pipeline_state import PipelineManager
+from agent_flow.core.stage_runtime import maybe_execute_stage_runtime
 
 
 @click.command("plan-eng-review")
 @click.option("--spec", default="", help="Requirements document path")
 @click.option("--scope", type=click.Choice(["frontend", "full"]), default="frontend")
-def cli(spec: str, scope: str) -> None:
+@click.option("--auto-run", is_flag=True)
+@click.option("--prompt-only", is_flag=True)
+@click.option(
+    "--backend",
+    type=click.Choice(["command", "agent-scheduler", "orchestrator", "orchestrator+agent-scheduler", "claude-native"]),
+    default=None,
+)
+def cli(spec: str, scope: str, auto_run: bool, prompt_only: bool, backend: str | None) -> None:
     project = Path.cwd()
+    manager = PipelineManager(project)
+    manager.start_stage("plan-eng-review")
     out = project / ".agent-flow" / "pipeline" / "eng-review.md"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(
@@ -43,6 +38,17 @@ def cli(spec: str, scope: str) -> None:
         ]),
         encoding="utf-8",
     )
-    _complete(project, "plan-eng-review")
+    runtime = maybe_execute_stage_runtime(
+        project,
+        "plan-eng-review",
+        out,
+        metadata=[spec or "spec.md", scope],
+        cli_auto_run=auto_run or None,
+        cli_prompt_only=prompt_only,
+        cli_backend=backend,
+    )
+    manager.complete_stage("plan-eng-review", verdict="approved", output=out.name)
     click.echo(f"Engineering review completed (scope: {scope})")
     click.echo(f"Output: {out}")
+    if runtime.attempted and not runtime.executed:
+        click.echo(f"Runtime fallback: {runtime.fallback_reason}")

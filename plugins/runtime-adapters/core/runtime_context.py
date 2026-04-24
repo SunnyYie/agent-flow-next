@@ -21,6 +21,8 @@ from agent_flow.core.skill_manager import SkillManager
 
 @dataclass
 class RecommendedSkill:
+    """A skill recommended for the current prompt based on trigger matching."""
+
     name: str
     why: str
     path: str
@@ -28,6 +30,8 @@ class RecommendedSkill:
 
 @dataclass
 class MemoryHit:
+    """A memory entry relevant to the current prompt."""
+
     entry_id: str
     title: str
     source_type: str
@@ -37,6 +41,8 @@ class MemoryHit:
 
 @dataclass
 class RecallHit:
+    """A recall summary relevant to the current prompt."""
+
     summary_id: str
     task: str
     outcome: str
@@ -45,6 +51,8 @@ class RecallHit:
 
 @dataclass
 class SkillTreeHit:
+    """A skill-tree entry matching the current prompt."""
+
     skill_name: str
     task: str
     updated_at: str
@@ -53,6 +61,8 @@ class SkillTreeHit:
 
 @dataclass
 class RuntimeContext:
+    """Unified runtime context collected for a prompt — skills, memory, recall, team."""
+
     prompt: str
     runtime_mode: str = ""
     event: str = ""
@@ -457,6 +467,7 @@ def _render_list_sections(context: RuntimeContext) -> list[str]:
 
 
 def runtime_context_state_path(project_dir: Path, *, target: str) -> Path:
+    """Return the file path for a persisted runtime context target."""
     state_dir = project_dir / ".agent-flow" / "state"
     filename = _TARGET_STATE_FILES.get(target)
     if filename is None:
@@ -471,6 +482,7 @@ def _persist_runtime_context(project_dir: Path, rendered: str, *, target: str) -
 
 
 def _load_current_phase(project_dir: Path) -> str:
+    """Read the first few lines of current_phase.md for context injection."""
     phase_path = project_dir / ".agent-flow" / "state" / "current_phase.md"
     if not phase_path.is_file():
         return ""
@@ -485,6 +497,7 @@ def _find_recommended_skills(
     *,
     skill_tree_hits: list[SkillTreeHit] | None = None,
 ) -> list[RecommendedSkill]:
+    """Score and rank skills by trigger/keyword match against the prompt."""
     prompt_lower = prompt.lower()
     prompt_queries = _prompt_queries(prompt_lower)
     tree_hit_names = {hit.skill_name for hit in (skill_tree_hits or [])}
@@ -521,6 +534,7 @@ def _find_recommended_skills(
 
 
 def _find_skill_tree_hits(project_dir: Path, prompt: str) -> list[SkillTreeHit]:
+    """Search the skill-tree.json for entries matching the prompt."""
     path = project_dir / ".agent-flow" / "state" / "skill-tree.json"
     if not path.is_file():
         return []
@@ -597,6 +611,7 @@ def _score_skill_match(
 
 
 def _find_relevant_memory(project_dir: Path, prompt: str) -> list[MemoryHit]:
+    """Search memory index (FTS5) then Soul.md fallback for relevant entries."""
     db_path = _find_db_path(project_dir)
     if db_path:
         from agent_flow.core.memory_index import _MTIME_CACHE_FILENAME, _get_persisted_index_probe_ttl
@@ -681,6 +696,7 @@ def _hits_from_results(results: list[dict]) -> list[MemoryHit]:
 
 
 def _find_relevant_recall(project_dir: Path, prompt: str) -> list[RecallHit]:
+    """Search recall index for session summaries relevant to the prompt."""
     manager = RecallManager(project_dir)
     results = manager.search_summaries(prompt, limit=3, use_fts5=True)
     if not results:
@@ -808,6 +824,7 @@ def _find_db_path(project_dir: Path) -> str | None:
 
 
 def _compact_text(text: str) -> str:
+    """Collapse whitespace and truncate to 180 characters."""
     text = " ".join(text.split())
     return text[:180]
 

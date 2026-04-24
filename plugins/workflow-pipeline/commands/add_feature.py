@@ -5,18 +5,8 @@ import subprocess
 from pathlib import Path
 
 import click
-import yaml
 
-
-def _complete(project: Path, stage: str) -> None:
-    path = project / ".agent-flow" / "state" / "pipeline-state.yaml"
-    if path.exists():
-        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    else:
-        data = {"stages": {}}
-    data.setdefault("stages", {})[stage] = "completed"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+from agent_flow.core.pipeline_state import PipelineManager
 
 
 def _slugify(name: str) -> str:
@@ -28,6 +18,8 @@ def _slugify(name: str) -> str:
 @click.argument("name")
 def cli(name: str) -> None:
     project = Path.cwd()
+    manager = PipelineManager(project)
+    state = manager.load_state()
     branch = f"feat/{_slugify(name)}"
 
     if (project / ".git").exists():
@@ -40,5 +32,11 @@ def cli(name: str) -> None:
     marker.parent.mkdir(parents=True, exist_ok=True)
     marker.write_text(f"name={name}\nbranch={branch}\n", encoding="utf-8")
 
-    _complete(project, "add-feature")
+    if not state.id:
+        manager.init_pipeline(feature_name=name, branch=branch)
+    else:
+        state.feature_name = state.feature_name or name
+        state.branch = branch
+        manager.save_state(state)
+    manager.complete_stage("add-feature", output=branch)
     click.echo(f"Feature branch ready: {branch}")

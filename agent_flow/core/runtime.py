@@ -158,6 +158,7 @@ def format_runtime_status(diagnosis: RuntimeDiagnosis) -> list[str]:
 
 
 def _has_explicit_executor_command(project_dir: Path) -> bool:
+    """Return True when an explicit executor_command is configured in the project."""
     config_path = project_dir / ".agent-flow" / "config.yaml"
     if not config_path.is_file():
         return False
@@ -178,6 +179,7 @@ def _has_explicit_executor_command(project_dir: Path) -> bool:
 
 
 def _native_readiness(project_dir: Path) -> str:
+    """Check whether claude-native runtime dependencies are present and observed."""
     from agent_flow.core.native_runtime import discover_native_agents
 
     commands_dir = project_dir / ".claude" / "commands"
@@ -205,12 +207,14 @@ def _native_readiness(project_dir: Path) -> str:
 
 
 def _resolve_backends(project_dir: Path, cli_backend: str | None) -> set[str]:
+    """Resolve runtime backends from CLI override or project config."""
     if cli_backend is not None:
         return _parse_backend_list(cli_backend)
     return project_runtime_backends(project_dir)
 
 
 def _parse_backend_list(raw_value: str) -> set[str]:
+    """Parse a backend specification string (e.g. 'a+b,c') into a normalized set."""
     separators = ["+", ",", " "]
     values = [raw_value]
     for separator in separators:
@@ -223,4 +227,5 @@ def _parse_backend_list(raw_value: str) -> set[str]:
 
 
 def _format_backend_set(backends: set[str]) -> str:
+    """Render a set of backends as a '+'-joined string."""
     return "+".join(sorted(backends))

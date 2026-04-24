@@ -1122,6 +1122,27 @@ def project_runtime_backends(project_dir: Path) -> set[str]:
     return normalized or {"command"}
 
 
+def project_auto_run_stages(project_dir: Path) -> set[str]:
+    """Return stages configured for automatic runtime execution."""
+    config_path = project_dir / PROJECT_DIR_NAME / PROJECT_CONFIG_NAME
+    if not config_path.is_file():
+        return set()
+
+    try:
+        data = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return set()
+
+    execution = data.get("execution")
+    if not isinstance(execution, dict):
+        return set()
+
+    value = execution.get("auto_run_stages")
+    if not isinstance(value, list):
+        return set()
+    return {stage for stage in value if isinstance(stage, str) and stage.strip()}
+
+
 def _maybe_add_builtin_executor(
     commands: dict[str, list[str]],
     project_dir: Path,
