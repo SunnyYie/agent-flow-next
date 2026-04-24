@@ -1,41 +1,61 @@
 from __future__ import annotations
 
-from datetime import datetime
 from pathlib import Path
 
 import click
 
+from agent_flow.core.organizer import MemoryOrganizer
+
 
 @click.command("organize")
-@click.option("--dry-run", is_flag=True)
-@click.option("--scope", type=click.Choice(["memory", "wiki", "recall", "all"]), default="all")
-def cli(dry_run: bool, scope: str) -> None:
-    project = Path.cwd()
-    root = project / ".agent-flow"
-    report = root / "state" / "organize-report.md"
-    report.parent.mkdir(parents=True, exist_ok=True)
+@click.option("--dry-run", is_flag=True, help="Show what would be organized without making changes")
+@click.option("--force", is_flag=True, help="Run organization even if triggers are not met")
+@click.option(
+    "--scope",
+    type=click.Choice(["memory", "wiki", "recall", "all"]),
+    default="all",
+    help="What to organize",
+)
+def cli(dry_run: bool, force: bool, scope: str) -> None:
+    project_path = Path.cwd()
+    organizer = MemoryOrganizer(project_path)
 
-    scanned = {
-        "memory": len(list((root / "memory").rglob("*.md"))) if (root / "memory").exists() else 0,
-        "wiki": len(list((root / "wiki").rglob("*.md"))) if (root / "wiki").exists() else 0,
-        "recall": len(list((root / "wiki" / "recall").rglob("*.md"))) if (root / "wiki" / "recall").exists() else 0,
-    }
-    targets = [scope] if scope != "all" else ["memory", "wiki", "recall"]
+    if not force and not dry_run:
+        triggers = organizer.check_triggers()
+        if not triggers:
+            click.echo("No organization triggers met. Use --force to run anyway.")
+            click.echo("\nTrigger thresholds:")
+            click.echo(f"  Memory entries: > {organizer.triggers.memory_entry_threshold}")
+            click.echo(f"  Wiki index lines: > {organizer.triggers.wiki_index_line_threshold}")
+            click.echo(f"  Recall summaries: > {organizer.triggers.recall_summary_threshold}")
+            click.echo(f"  Days since last organize: > {organizer.triggers.days_since_last_organize}")
+            return
 
-    lines = [
-        "# Organize Report",
-        "",
-        f"Generated: {datetime.now().isoformat(timespec='seconds')}",
-        f"Dry run: {dry_run}",
-        "",
-        "## Scan Summary",
-    ]
-    for target in targets:
-        lines.append(f"- {target}: {scanned[target]} entries")
-    lines.append("")
-    lines.append("## Result")
-    lines.append("- Native organization completed" if not dry_run else "- Native organization dry-run completed")
-    report.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    report = organizer.run_full_organization(dry_run=dry_run, force=force, scope=scope)
 
-    click.echo(f"Organize {('dry-run ' if dry_run else '')}completed (scope={scope})")
-    click.echo(f"Report: {report}")
+    if dry_run:
+        click.echo("=== DRY RUN - No changes made ===\n")
+    else:
+        click.echo("=== Organization Complete ===\n")
+
+    click.echo(f"Timestamp: {report.timestamp}")
+    click.echo(f"Scope: {scope}")
+
+    if report.memory_entries_scanned:
+        click.echo(f"\nMemory entries scanned: {report.memory_entries_scanned}")
+        click.echo(f"  Deprecated: {report.entries_deprecated}")
+        click.echo(f"  Archived: {report.entries_archived}")
+        click.echo(f"  Compressed: {report.entries_compressed}")
+
+    if report.wiki_entries_scanned:
+        click.echo(f"\nWiki changes: {report.wiki_entries_scanned}")
+
+    if report.recall_entries_scanned:
+        click.echo(f"\nRecall pruned: {report.recall_entries_scanned}")
+
+    if report.decay_results:
+        click.echo("\n--- Decay Details ---")
+        for result in report.decay_results:
+            if result.action != "keep":
+                click.echo(f"  [{result.action.upper()}] {result.entry_header}")
+                click.echo(f"    Reason: {result.reason}")
