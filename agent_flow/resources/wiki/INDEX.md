@@ -44,6 +44,7 @@
   - [agent-teams](patterns/workflow/agent-teams.md) — 多会话并行协作（tmux + worktree + 共享任务列表）
   - [test-matrix-5-dimension-check](patterns/workflow/test-matrix-5-dimension-check.md) — 测试矩阵5维检查（覆盖度/可追溯/自动化映射/边界场景/双验收）
   - [e2e-script-three-part-structure](patterns/workflow/e2e-script-three-part-structure.md) — 联调脚本三段式结构（输入模板+预期输出+验证要点）
+  - [jira-search-to-dev](patterns/workflow/jira-search-to-dev.md) — Jira 搜索到开发中的标准闭环流程
 - [architecture](patterns/architecture/) — 架构模式
   - [adr-decision-record](patterns/architecture/adr-decision-record.md) — 架构决策记录(ADR)
   - [fatal-transient-errors](patterns/architecture/fatal-transient-errors.md) — FATAL/TRANSIENT错误分类与容错

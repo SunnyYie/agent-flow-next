@@ -46,6 +46,7 @@ updated: 2026-04-27
 - `Jira` `需求单` `任务单`:
   - `/Users/sunyi/.agents/skills/lark-openapi-explorer/SKILL.md`
   - `agent_flow/resources/wiki/tools/mai-jira-cli.md`
+  - [jira-search-to-dev](workflow/jira-search-to-dev/SKILL.md)
 - `需求拆解` `前后端划分` `验收点`:
   - [requirement-decomposition](documentation/requirement-decomposition/SKILL.md)
 - `同事圈` `公司圈` `company circles` `ref-company-circles`:
@@ -59,6 +60,7 @@ updated: 2026-04-27
 - [phase-review](workflow/phase-review/SKILL.md) — 阶段总结与用户门控
 - [task-complexity](workflow/task-complexity/SKILL.md) — 复杂度评估
 - [acceptance-check](workflow/acceptance-check/SKILL.md) — 交付验收
+- [jira-search-to-dev](workflow/jira-search-to-dev/SKILL.md) — Jira 搜索到开发中的建单与流转
 
 ## Agent-Orchestration（多 Agent 编排）
 
