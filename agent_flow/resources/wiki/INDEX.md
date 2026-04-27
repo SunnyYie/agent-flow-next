@@ -13,6 +13,20 @@
 - [[security|topics/security]] — 安全（踩坑+权限，2篇）
 - [[react-native|topics/react-native]] — React Native（踩坑，2篇）
 
+
+## Feishu/Lark 需求检索入口
+
+- [patterns/feishu/wiki-doc-read.md](patterns/feishu/wiki-doc-read.md) — 飞书 Wiki 读取与解析
+- [pitfalls/feishu/lark-cli-params.md](pitfalls/feishu/lark-cli-params.md) — lark-cli 参数与调用陷阱
+- [tools/mai-jira-cli.md](tools/mai-jira-cli.md) — Jira 工具链与需求单联动
+- 本机 Lark skills 入口：`/Users/sunyi/.agents/skills/lark-shared/SKILL.md`、`/Users/sunyi/.agents/skills/lark-doc/SKILL.md`
+
+## Keyword Quick Map（关键词速查）
+
+- `飞书` `lark` `lark-cli` `wiki` `docs` `obj_token` `权限` -> `patterns/feishu/wiki-doc-read.md` + `pitfalls/feishu/lark-cli-params.md`
+- `jira` `任务单` `需求单` -> `tools/mai-jira-cli.md`
+- `同事圈` `公司圈` `company circles` `ref-company-circles` -> `patterns/requirement/frontend-backend-classification.md` + `topics/workflow`
+
 ## Tag Index（标签索引）
 
 > 按标签精确查找文档。[[TAG-INDEX|查看完整标签索引]]
