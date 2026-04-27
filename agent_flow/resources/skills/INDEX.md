@@ -2,7 +2,7 @@
 title: "Skills 技能索引"
 category: index
 module: meta
-agents: [main, planner, coder, verifier, researcher, architect]
+agents: [main, coder, verifier]
 scope: global
 tags: [index, meta, skills]
 confidence: 1.0

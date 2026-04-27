@@ -5,7 +5,7 @@ module: architecture
 status: verified
 confidence: 0.95
 created: 2026-04-13
-updated: 2026-04-14
+updated: 2026-04-27
 tags: [agent, roles, orchestration, multi-agent]
 ---
 
@@ -17,21 +17,14 @@ tags: [agent, roles, orchestration, multi-agent]
 
 | 角色 | Soul | 职责 | 启动时机 |
 |------|------|------|---------|
-| Main | main.md | 任务监督与验收 | 始终在线 |
-| Planner | planner.md | 任务分解与规划 | 需要规划时 |
-| Coder | coder.md | 代码实现与测试 | 编码任务 |
-| Writer | writer.md | 文档撰写与转换 | 文档任务 |
-| Researcher | researcher.md | 信息调研与方案分析 | 调研任务 |
-| Verifier | verifier.md | 质量验收与审查 | 验收检查点 |
-| Architect | architect.md | 架构设计与决策 | 架构任务 |
+| Supervisor | main.md | 监督分支/Jira流转/推送与MR创建 | 始终在线 |
+| Developer | coder.md | 阅读需求、拆解任务、关联代码、开发与测试 | 开发阶段 |
+| Acceptance | verifier.md | 独立验收：复核需求/任务/代码并给出PASS/FAIL | 验收阶段 |
 
 ## 角色选择策略
-- 需求模糊 → Planner 澄清
-- 需要编码 → Coder 实现
-- 需要文档 → Writer 撰写
-- 需要调研 → Researcher 搜索
-- 需要验收 → Verifier 审查
-- 需要架构 → Architect 设计
+- 需要流程治理与发布收口 → Supervisor
+- 需要需求解析与开发落地 → Developer
+- 需要独立质量判定与验收门禁 → Acceptance
 
 ## 协作规则
-详见 [[three-agent-model|三Agent协作模型]] — Main Agent 启停子 Agent，Executor/Verifier 互斥运行，用完即关。
+详见 [[three-agent-model|三Agent协作模型]]：Supervisor 只编排与门禁，Developer 负责实现与测试，Acceptance 独立验收，通过后才允许推送与创建 MR。

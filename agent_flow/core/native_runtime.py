@@ -17,8 +17,8 @@ from agent_flow.core.task_runner import TaskResult
 logger = logging.getLogger(__name__)
 
 _STAGE_TO_AGENT: dict[str, str] = {
-    "plan-review": "verifier",
-    "plan-eng-review": "verifier",
+    "plan-review": "coder",
+    "plan-eng-review": "coder",
     "review": "verifier",
     "qa": "verifier",
     "run": "executor",

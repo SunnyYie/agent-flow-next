@@ -9,7 +9,7 @@ created: 2026-04-13
 
 # Skill: architecture-design
 
-> 灵感来源: agency-agents Software Architect — 领域驱动、权衡透明、决策有据
+> 灵感来源: agency-agents 架构设计模式 — 领域驱动、权衡透明、决策有据
 
 ## Trigger
 当需要进行系统架构设计、技术选型、或记录架构决策时触发

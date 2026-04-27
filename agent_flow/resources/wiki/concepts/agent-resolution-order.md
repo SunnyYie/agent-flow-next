@@ -2,7 +2,7 @@
 title: "Agent 调度优先级：Skill → Agent → Command"
 category: concept
 module: architecture
-agents: [main, planner, architect]
+agents: [main, coder, verifier]
 scope: global
 tags: [agent, skill, command, resolution, priority]
 confidence: 0.9

@@ -231,8 +231,8 @@ def _finalize_scheduler_backend(context: SchedulerContext | None, success: bool,
 def _stage_role(stage_name: str) -> str:
     """Map pipeline stages to sub-agent roles."""
     role_map = {
-        "plan-review": "planner",
-        "plan-eng-review": "architect",
+        "plan-review": "coder",
+        "plan-eng-review": "coder",
         "review": "verifier",
         "qa": "verifier",
     }

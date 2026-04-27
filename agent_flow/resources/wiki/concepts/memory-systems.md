@@ -2,7 +2,7 @@
 title: "Claude Code 四层记忆系统"
 category: concept
 module: workflow
-agents: [main, coder, writer, researcher]
+agents: [main, coder, verifier]
 scope: global
 tags: [memory, claude-code, auto-memory, agent-memory, CLAUDE.md]
 confidence: 0.9

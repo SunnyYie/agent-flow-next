@@ -15,12 +15,12 @@
 
 | 任务类型 | 角色 | 说明 |
 |---------|------|------|
-| 信息搜索/调研 | Researcher | 查资料、找方案、交叉验证 |
-| 代码实现 | Coder | 按设计文档编码、TDD |
-| 文档撰写/转换 | Writer | 按模板组织、精确保留数据 |
-| 质量验收 | Verifier | 证据驱动、标准先行 |
-| 架构设计 | Architect | 权衡分析、ADR记录 |
-| 任务规划 | Planner | 分解任务、标注依赖 |
+| 信息搜索/调研 | Developer | 查资料、找方案、交叉验证 |
+| 代码实现 | Developer | 按设计文档编码、TDD |
+| 文档撰写/转换 | Developer | 按模板组织、精确保留数据 |
+| 质量验收 | Acceptance | 证据驱动、标准先行 |
+| 架构设计 | Developer | 权衡分析、ADR记录 |
+| 任务规划 | Developer | 分解任务、标注依赖 |
 
 ## Required Reading — 前置阅读
 

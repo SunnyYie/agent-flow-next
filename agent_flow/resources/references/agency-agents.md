@@ -48,7 +48,7 @@ Phase 0 发现 → Phase 1 策略 → Phase 2 基础 → Phase 3 构建 → Phas
 Developer实现 → Evidence Collector QA验证 → PASS(继续) / FAIL(反馈重试,最多3次) → 升级
 ```
 
-**Workflow Architect**：桥梁角色，不做实现只设计"工作流树"，四维注册表（工作流/组件/用户旅程/状态）
+**Workflow Designer**：桥梁角色，不做实现只设计"工作流树"，四维注册表（工作流/组件/用户旅程/状态）
 
 ## 可借鉴要点
 

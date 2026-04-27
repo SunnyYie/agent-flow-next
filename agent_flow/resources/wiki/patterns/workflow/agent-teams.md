@@ -2,7 +2,7 @@
 title: "Agent Teams：多会话协作"
 category: pattern
 module: workflow
-agents: [main, planner, architect]
+agents: [main, coder, verifier]
 scope: global
 tags: [agent-teams, multi-session, parallel, tmux, coordination]
 confidence: 0.75
@@ -29,10 +29,10 @@ Agent Teams 允许多个 Claude Code 实例在不同终端/工作树中并行工
 ## 架构
 
 ```
-Main Session (指挥者)
-├── Teammate 1: Command Architect (worktree: feature/cmd)
-├── Teammate 2: Agent Engineer   (worktree: feature/agent)
-└── Teammate 3: Skill Designer   (worktree: feature/skill)
+Main Session (Supervisor)
+├── Teammate 1: Workflow Developer (worktree: feature/workflow)
+├── Teammate 2: Runtime Developer  (worktree: feature/runtime)
+└── Teammate 3: Skill Developer    (worktree: feature/skill)
     ↕ 通过共享任务列表协调
     ↕ 仅在接口层同步
 ```

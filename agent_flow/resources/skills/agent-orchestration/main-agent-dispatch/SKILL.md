@@ -45,7 +45,7 @@ updated: 2026-04-15
 ├── 复杂度 ≤4 (Simple) → 不派发，直接处理
 ├── 上下文预算 >70% → 强制派发任何剩余工作
 ├── 子任务涉及 ≥3 文件修改 → 派发 executor
-└── 子任务需要 WebSearch → 派发 researcher
+└── 子任务需要 WebSearch → 派发 executor（Developer）
 ```
 
 ### Step 2: 更新 flow-context.yaml
@@ -71,7 +71,7 @@ tasks:
 
 agents:
   - name: "{子Agent名称}"
-    role: "{executor|verifier|researcher}"
+    role: "{executor|verifier}"
     status: "{running|completed|failed}"
     task: {任务ID}
 ```
@@ -134,13 +134,13 @@ Agent({
 })
 ```
 
-**Researcher 子 Agent**:
+**Developer（调研模式）子 Agent**:
 
 ```
 Agent({
-    description: "researcher-{n}: 调研{主题}",  // Replace {n} with researcher number, {主题} with the research topic
-    prompt: "你是研究者 Agent。\n调研主题: {主题}\n任务包: .agent-flow/artifacts/task-{id}-packet.md\n写调研结果到: .agent-flow/artifacts/task-{id}-result.md\n写摘要到: .agent-flow/artifacts/task-{id}-summary.md",
-    // ^ Researchers need a topic but no acceptance criteria — output is informational, not verifiable
+    description: "executor-{n}: 调研{主题}",  // Replace {n} with worker number, {主题} with the research topic
+    prompt: "你是开发者 Agent（调研模式）。\n调研主题: {主题}\n任务包: .agent-flow/artifacts/task-{id}-packet.md\n写调研结果到: .agent-flow/artifacts/task-{id}-result.md\n写摘要到: .agent-flow/artifacts/task-{id}-summary.md",
+    // ^ Developer(research mode) needs a topic but no acceptance criteria — output is informational
     // ^ {id} must match the task ID in flow-context.yaml
     subagent_type: "general-purpose"
 })

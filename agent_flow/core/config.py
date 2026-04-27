@@ -51,6 +51,9 @@ PROJECT_DEFAULT_DIRS = [
     "logs",
 ]
 
+THREE_ROLE_SOUL_FILES = {"main.md", "coder.md", "verifier.md"}
+LEGACY_MERGED_SOUL_FILES = {"planner.md", "researcher.md", "writer.md", "architect.md"}
+
 
 def bundled_resources_root() -> Path:
     return Path(__file__).resolve().parents[1] / "resources"
@@ -236,6 +239,16 @@ def _sync_global_asset_to_team(kind: str, team_root: Path, global_root: Path) ->
         # Do not overwrite existing team asset files.
         if not dst.exists():
             shutil.copy2(src, dst)
+
+
+def _enforce_three_role_souls(souls_root: Path) -> None:
+    """Keep only the three active role soul files and remove merged legacy ones."""
+    if not souls_root.exists():
+        return
+    for legacy_name in LEGACY_MERGED_SOUL_FILES:
+        legacy = souls_root / legacy_name
+        if legacy.exists():
+            legacy.unlink()
 
 
 def _skill_scene_summary(skills_root: Path) -> list[tuple[str, int, list[Path]]]:
@@ -593,6 +606,7 @@ def init_team(
     global_root = layer_root("global", project_dir=project_dir)
     _sync_global_asset_to_team(kind="references", team_root=root, global_root=global_root)
     _sync_global_asset_to_team(kind="souls", team_root=root, global_root=global_root)
+    _enforce_three_role_souls(root / "souls")
     config = TeamConfig(team_id=team_id, name=name)
     (root / "team.yaml").write_text(yaml.safe_dump(config.model_dump(), sort_keys=False), encoding="utf-8")
     _write_team_index_docs(team_root=root, global_root=global_root)
@@ -906,9 +920,12 @@ def init_project(project_dir: Path) -> Path:
     cfg = ProjectConfig(name=Path(project_dir).resolve().name, team_id=existing_data.get("team_id", ""))
     config_path.write_text(yaml.safe_dump(cfg.model_dump(), sort_keys=False), encoding="utf-8")
     _sync_template_hooks_to_project(project_root=root, project_dir=project_dir)
-    soul_path = root / "souls" / "main.md"
-    if not soul_path.exists():
-        soul_path.write_text("", encoding="utf-8")
+    souls_root = root / "souls"
+    for soul_file in sorted(THREE_ROLE_SOUL_FILES):
+        soul_path = souls_root / soul_file
+        if not soul_path.exists():
+            soul_path.write_text("", encoding="utf-8")
+    _enforce_three_role_souls(souls_root)
     global_root = layer_root("global", project_dir=project_dir)
     team_root = layer_root("team", team_id=cfg.team_id, project_dir=project_dir) if cfg.team_id else None
     _write_project_index_docs(root, global_root=global_root, team_root=team_root)

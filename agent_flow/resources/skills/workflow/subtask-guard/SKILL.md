@@ -59,7 +59,7 @@ created: 2026-04-13
 ├── 需要独立上下文？（复杂推理/代码审查/安全分析）→ Agent 独立执行
 │   ├── 调试/探索类 → Explore Agent (haiku, 只读)
 │   ├── 代码实现类 → Coder Agent (sonnet)
-│   └── 深度分析类 → Researcher/Architect Agent (opus)
+│   └── 深度分析类 → Developer Agent（调研/架构模式, opus）
 └── 需要编排多步骤？（用户入口/多Agent协作）→ Command 编排
     └── Command 内部可调度 Agent + Skill
 ```
