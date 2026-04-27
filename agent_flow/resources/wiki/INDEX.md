@@ -73,7 +73,7 @@
 - [security](pitfalls/security/) — 安全踩坑
   - [path-traversal-bypass](pitfalls/security/path-traversal-bypass.md) — 路径遍历绕过漏洞 + 安全模块对抗性测试
 - [environment](pitfalls/environment/) — 环境踩坑
-  - [venv-path-resolution](pitfalls/environment/venv-path-resolution.md) — .venv路径解析错误
+  - [lark-cli-login-shell-path-mismatch](pitfalls/environment/lark-cli-login-shell-path-mismatch.md) — 交互终端可用但子进程不可用（PATH/登录shell差异）
 - [tools](pitfalls/tools/) — 工具踩坑
   - [codex-provider-auth-mismatch](pitfalls/tools/codex-provider-auth-mismatch.md) — Codex登录后config.toml与auth.json不匹配
   - [mongosh-wire-version](pitfalls/tools/mongosh-wire-version.md) — mongosh与旧版MongoDB不兼容（wire version报错）
