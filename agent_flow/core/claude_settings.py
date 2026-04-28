@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from pathlib import Path
 
 from agent_flow.core.plugin_registry import HookRegistration
@@ -23,6 +24,41 @@ def _load_settings(path: Path) -> dict:
     if not isinstance(raw, dict):
         raise ValueError(f"invalid Claude settings format: {path}")
     return raw
+
+
+@dataclass(frozen=True)
+class _ManagedPluginHook:
+    event: str
+    matcher: str
+    command: str
+
+
+def _normalize_command(text: str) -> str:
+    return text.replace("\\", "/").strip()
+
+
+def is_plugin_managed_command(command: str) -> bool:
+    # Plugin install path is always nested under `.agent-flow/plugins/`.
+    normalized = _normalize_command(command).lower()
+    return "/.agent-flow/plugins/" in normalized
+
+
+def plugin_settings_path(project_dir: Path) -> Path:
+    claude_dir = project_dir / ".claude"
+    claude_dir.mkdir(parents=True, exist_ok=True)
+    # Keep plugin-managed hooks in settings.local.json to align with project-local behavior.
+    return claude_dir / "settings.local.json"
+
+
+def _legacy_plugin_settings_path(project_dir: Path) -> Path:
+    claude_dir = project_dir / ".claude"
+    claude_dir.mkdir(parents=True, exist_ok=True)
+    return claude_dir / "settings.json"
+
+
+def _plugin_settings_candidates(project_dir: Path) -> list[Path]:
+    # local first (active managed location), then legacy path for migration cleanup.
+    return [plugin_settings_path(project_dir), _legacy_plugin_settings_path(project_dir)]
 
 
 def _find_or_create_matcher_entry(entries: list, matcher: str) -> dict:
@@ -80,82 +116,123 @@ def ensure_project_claude_hooks(project_dir: Path) -> tuple[Path, int]:
     return settings_path, added
 
 
-def add_plugin_hook_registrations(project_dir: Path, registrations: list[HookRegistration]) -> tuple[Path, int]:
-    settings_path = project_dir / ".claude" / "settings.json"
-    settings_path.parent.mkdir(parents=True, exist_ok=True)
+def _collect_plugin_commands_from_settings(settings: dict) -> set[str]:
+    hooks = settings.get("hooks")
+    if not isinstance(hooks, dict):
+        return set()
+    commands: set[str] = set()
+    for event_entries in hooks.values():
+        if not isinstance(event_entries, list):
+            continue
+        for entry in event_entries:
+            if not isinstance(entry, dict):
+                continue
+            for hook in entry.get("hooks", []):
+                if not isinstance(hook, dict):
+                    continue
+                if hook.get("type") != "command":
+                    continue
+                command = hook.get("command", "")
+                if isinstance(command, str) and is_plugin_managed_command(command):
+                    commands.add(command)
+    return commands
 
+
+def collect_registered_plugin_commands(project_dir: Path) -> set[str]:
+    """Return plugin-managed hook commands from project local + legacy settings."""
+    commands: set[str] = set()
+    for settings_path in _plugin_settings_candidates(project_dir):
+        if not settings_path.exists():
+            continue
+        settings = _load_settings(settings_path)
+        commands.update(_collect_plugin_commands_from_settings(settings))
+    return commands
+
+
+def _strip_plugin_managed_hooks(settings: dict) -> dict:
+    hooks = settings.get("hooks")
+    if not isinstance(hooks, dict):
+        return settings
+
+    for event_name, event_entries in list(hooks.items()):
+        if not isinstance(event_entries, list):
+            continue
+        new_entries: list[dict] = []
+        for entry in event_entries:
+            if not isinstance(entry, dict):
+                continue
+            matcher = entry.get("matcher")
+            entry_hooks = entry.get("hooks", [])
+            if not isinstance(entry_hooks, list):
+                continue
+
+            kept_hooks: list[dict] = []
+            for hook in entry_hooks:
+                if not isinstance(hook, dict):
+                    continue
+                if hook.get("type") != "command":
+                    kept_hooks.append(hook)
+                    continue
+                command = hook.get("command", "")
+                if is_plugin_managed_command(command):
+                    continue
+                kept_hooks.append(hook)
+
+            if kept_hooks:
+                entry["hooks"] = kept_hooks
+                entry["matcher"] = matcher if isinstance(matcher, str) else "*"
+                new_entries.append(entry)
+
+        if new_entries:
+            hooks[event_name] = new_entries
+        else:
+            hooks.pop(event_name, None)
+    return settings
+
+
+def sync_plugin_hook_registrations(project_dir: Path, registrations: list[HookRegistration]) -> tuple[Path, int]:
+    """Synchronize project-local plugin hooks to the exact desired set.
+
+    This keeps plugin hooks bound to project `.claude/settings.local.json`
+    and avoids stale/duplicated hooks when plugin scope precedence changes.
+    """
+    settings_path = plugin_settings_path(project_dir)
     settings = _load_settings(settings_path)
+
     hooks = settings.setdefault("hooks", {})
     if not isinstance(hooks, dict):
         raise ValueError("invalid Claude settings format: 'hooks' must be an object")
 
-    added = 0
-    for registration in registrations:
-        event_entries = hooks.setdefault(registration.event, [])
-        if not isinstance(event_entries, list):
-            raise ValueError(f"invalid Claude settings format: '{registration.event}' must be a list")
+    desired = {
+        _ManagedPluginHook(event=item.event, matcher=item.matcher, command=item.command)
+        for item in registrations
+    }
 
-        entry = _find_or_create_matcher_entry(event_entries, matcher=registration.matcher)
+    # 1) Remove plugin-managed commands in active settings.
+    settings = _strip_plugin_managed_hooks(settings)
+    hooks = settings.setdefault("hooks", {})
+    if not isinstance(hooks, dict):
+        raise ValueError("invalid Claude settings format: 'hooks' must be an object")
+
+    # 2) Add desired plugin hooks.
+    for item in sorted(desired, key=lambda i: (i.event, i.matcher, i.command)):
+        event_entries = hooks.setdefault(item.event, [])
+        if not isinstance(event_entries, list):
+            raise ValueError(f"invalid Claude settings format: '{item.event}' must be a list")
+        entry = _find_or_create_matcher_entry(event_entries, matcher=item.matcher)
         matcher_hooks = entry["hooks"]
-        if _event_has_command(event_entries, registration.command):
-            continue
-        matcher_hooks.append({"type": "command", "command": registration.command})
-        added += 1
+        matcher_hooks.append({"type": "command", "command": item.command})
 
     settings_path.write_text(json.dumps(settings, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    return settings_path, added
 
+    # 3) Migration cleanup: strip plugin-managed hooks from legacy settings.json.
+    legacy_path = _legacy_plugin_settings_path(project_dir)
+    if legacy_path.exists():
+        legacy_settings = _load_settings(legacy_path)
+        before = _collect_plugin_commands_from_settings(legacy_settings)
+        legacy_settings = _strip_plugin_managed_hooks(legacy_settings)
+        after = _collect_plugin_commands_from_settings(legacy_settings)
+        if before != after:
+            legacy_path.write_text(json.dumps(legacy_settings, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
-def remove_plugin_hook_registrations(project_dir: Path, registrations: list[HookRegistration]) -> tuple[Path, int]:
-    settings_path = project_dir / ".claude" / "settings.json"
-    if not settings_path.exists():
-        return settings_path, 0
-
-    settings = _load_settings(settings_path)
-    hooks = settings.get("hooks")
-    if not isinstance(hooks, dict):
-        return settings_path, 0
-
-    removed = 0
-    for registration in registrations:
-        event_entries = hooks.get(registration.event)
-        if not isinstance(event_entries, list):
-            continue
-
-        updated_entries: list[dict] = []
-        for entry in event_entries:
-            if not isinstance(entry, dict):
-                updated_entries.append(entry)
-                continue
-            if entry.get("matcher") != registration.matcher:
-                updated_entries.append(entry)
-                continue
-
-            entry_hooks = entry.get("hooks", [])
-            if not isinstance(entry_hooks, list):
-                updated_entries.append(entry)
-                continue
-
-            new_hooks: list[dict] = []
-            for hook in entry_hooks:
-                if (
-                    isinstance(hook, dict)
-                    and hook.get("type") == "command"
-                    and hook.get("command") == registration.command
-                ):
-                    removed += 1
-                    continue
-                new_hooks.append(hook)
-
-            if new_hooks:
-                entry["hooks"] = new_hooks
-                updated_entries.append(entry)
-
-        if updated_entries:
-            hooks[registration.event] = updated_entries
-        else:
-            hooks.pop(registration.event, None)
-
-    if removed > 0:
-        settings_path.write_text(json.dumps(settings, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    return settings_path, removed
+    return settings_path, len(desired)

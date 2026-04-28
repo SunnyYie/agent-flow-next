@@ -41,7 +41,6 @@ DEFAULT_MARKER_FIELD_ORDER = ("phase", "status", "timestamp", "task", "confirmed
 STRUCTURED_MARKER_FILES = frozenset({
     ".requirement-clarified",
     ".design-confirmed",
-    ".implementation-question-raised",
     ".mcp-tool-factory-requested",
     ".user-acceptance-done",
 })

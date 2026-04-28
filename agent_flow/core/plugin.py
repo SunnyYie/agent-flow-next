@@ -3,7 +3,7 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
-from agent_flow.core.claude_settings import add_plugin_hook_registrations, remove_plugin_hook_registrations
+from agent_flow.core.claude_settings import sync_plugin_hook_registrations
 from agent_flow.core.plugin_manifest import load_plugin_manifest
 from agent_flow.core.plugin_registry import HookRegistration, PluginRecord, PluginRegistry, PluginScope
 
@@ -105,9 +105,6 @@ def install_plugin(
         for hook in manifest.hooks
     ]
 
-    if hook_registrations:
-        add_plugin_hook_registrations(project_dir, hook_registrations)
-
     record = PluginRecord(
         name=plugin_name,
         version=manifest.version,
@@ -118,6 +115,7 @@ def install_plugin(
         scope=scope,
     )
     PluginRegistry.upsert_record(scope, record, project_dir=project_dir, team_id=team_id)
+    _sync_effective_plugin_hooks(project_dir=project_dir, team_id=team_id)
     return record
 
 
@@ -134,16 +132,10 @@ def set_plugin_enabled(
     if record is None:
         raise KeyError(f"plugin not found in {scope.value} scope: {plugin_name}")
 
-    if enabled:
-        if record.hook_registrations:
-            add_plugin_hook_registrations(project_dir, record.hook_registrations)
-    else:
-        if record.hook_registrations:
-            remove_plugin_hook_registrations(project_dir, record.hook_registrations)
-
     record.enabled = enabled
     records[plugin_name] = record
     PluginRegistry.save_scope(scope, records, project_dir=project_dir, team_id=team_id)
+    _sync_effective_plugin_hooks(project_dir=project_dir, team_id=team_id)
     return record
 
 
@@ -159,14 +151,12 @@ def uninstall_plugin(
     if record is None:
         raise KeyError(f"plugin not found in {scope.value} scope: {plugin_name}")
 
-    if record.hook_registrations:
-        remove_plugin_hook_registrations(project_dir, record.hook_registrations)
-
     plugin_dir = Path(record.install_path)
     if plugin_dir.exists():
         shutil.rmtree(plugin_dir)
 
     PluginRegistry.delete_record(scope, plugin_name, project_dir=project_dir, team_id=team_id)
+    _sync_effective_plugin_hooks(project_dir=project_dir, team_id=team_id)
 
 
 def list_plugins(
@@ -210,3 +200,11 @@ def ensure_default_builtin_plugins(
         )
         added.append(plugin_name)
     return added
+
+
+def _sync_effective_plugin_hooks(*, project_dir: Path, team_id: str = "") -> None:
+    effective = PluginRegistry.load_effective(project_dir=project_dir, team_id=team_id, enabled_only=True)
+    desired: list[HookRegistration] = []
+    for _name, record in sorted(effective.items(), key=lambda item: item[0].lower()):
+        desired.extend(record.hook_registrations)
+    sync_plugin_hook_registrations(project_dir, desired)

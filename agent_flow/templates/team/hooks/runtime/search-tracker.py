@@ -2,7 +2,7 @@
 """
 AgentFlow Search Tracker — PostToolUse hook
 当 Agent 搜索了 Skills/Wiki/Soul/Web 知识库时，创建搜索标记文件。
-thinking-chain-enforce.py 在执行前检查此标记，确保"搜索先行"。
+subtask-guard-enforce.py 在执行前检查此标记，确保"搜索先行"。
 
 v2.0 新增：当搜索命中 wiki/pitfalls 中的工具相关条目时，
 创建 .tool-wiki-read 标记，供 tool-precheck-guard.py 检查。
