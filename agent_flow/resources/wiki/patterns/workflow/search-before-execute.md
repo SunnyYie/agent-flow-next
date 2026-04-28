@@ -51,6 +51,17 @@ tags: [workflow, execute, quality, cognitive-loop, search-to-develop, pitfall, s
 - 错误：搜索"AI评论" → 匹配到 AICommentTag、AiCommentGuide、AICommentRelatedFeedList 等多个不相关功能
 - 正确：搜索"实习圈" → 精确定位到 `gossip_detail_new/` 目录
 
+### 步骤 4: 飞书需求检索顺序（本地优先）
+
+当输入为飞书链接或疑似飞书需求时，必须执行以下顺序：
+
+1. 项目级 `.agent-flow/wiki` + `.agent-flow/skills`
+2. 团队级 `agent-flow-team` wiki/skills
+3. 若仍无结果，再执行 WebSearch
+4. 本地与外部都无解时，再向用户升级并提供备选方案
+
+**禁止**：跳过前两步直接外网检索。
+
 ### 关键判断规则
 
 1. 搜索不到 = 新增 → 直接开发，不需要验证其他分支

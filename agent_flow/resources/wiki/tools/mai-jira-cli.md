@@ -32,6 +32,20 @@ jira issue transitions MPR-XXXXX
 4. 需求描述默认：不填写（留空）
 5. 相关角色默认：`sunyi`
 
+## 字段决策规则（新增）
+
+1. 仅对“团队已约定默认值字段”自动填充。
+2. 对业务含义不明确、存在多选项、影响排期/范围/责任归属的字段，必须先向用户确认。
+3. 禁止为未知字段填入临时值或猜测值。
+
+## Hook 硬约束（新增）
+
+执行 `jira issue create/subtask/transition/comment/update` 时：
+
+1. 必须先有 `.jira-context-ready`（已检索 Jira wiki/skill）。
+2. 命令中若出现非默认 `customfield_xxx`，必须先有 `.jira-field-decision-confirmed`。
+3. 命令中若出现占位值（如 `xxx/todo/tmp/随便/待定`），会被直接阻断。
+
 ## 标准流程（搜索文档 -> 操作 Jira）
 
 1. 搜索需求：
