@@ -4,6 +4,10 @@ from pathlib import Path
 
 import click
 
+from agent_flow.core.claude_settings import (
+    collect_registered_plugin_commands,
+    plugin_settings_path,
+)
 from agent_flow.core.config import project_team_id
 from agent_flow.core.plugin import install_plugin, list_plugins, set_plugin_enabled, uninstall_plugin
 from agent_flow.core.plugin_registry import PluginScope
@@ -99,3 +103,39 @@ def plugin_list_cmd(enabled_only: bool) -> None:
     for name, record in records.items():
         status = "enabled" if record.enabled else "disabled"
         click.echo(f"{name}\t{record.version}\t{record.scope.value}\t{status}\t{record.install_path}")
+
+
+@plugin_group.command("verify")
+def plugin_verify_cmd() -> None:
+    """Verify project-local Claude hook registrations for effective plugins."""
+    project_dir = Path.cwd()
+    team_id = project_team_id(project_dir)
+    records = list_plugins(project_dir=project_dir, team_id=team_id, enabled_only=True)
+
+    expected: set[str] = set()
+    for record in records.values():
+        for hook in record.hook_registrations:
+            expected.add(hook.command)
+
+    actual = collect_registered_plugin_commands(project_dir)
+    settings_path = plugin_settings_path(project_dir)
+
+    missing = sorted(expected - actual)
+    stale = sorted(actual - expected)
+
+    click.echo(f"settings(primary): {settings_path}")
+    click.echo(f"enabled plugins: {len(records)}")
+    click.echo(f"expected hooks: {len(expected)}")
+    click.echo(f"registered hooks: {len(actual)}")
+
+    if missing:
+        click.echo("\nmissing hooks:")
+        for item in missing:
+            click.echo(f"- {item}")
+    if stale:
+        click.echo("\nstale hooks:")
+        for item in stale:
+            click.echo(f"- {item}")
+
+    if not missing and not stale:
+        click.echo("\nplugin hooks verified: OK")

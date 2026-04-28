@@ -1,15 +1,17 @@
 ---
 name: knowledge-search
-version: 1.0.0
-trigger: 搜索技能, 查找知识, 搜索完成, 工具发现, skill search, 查找方案, 安装工具
+version: 2.0.0
+trigger: 搜索技能, 查找知识, 搜索完成, 工具发现, skill search, 查找方案, 安装工具, web-research, source-code-research, 代码调研
 confidence: 0.95
 abstraction: universal
 created: 2026-04-14
+updated: 2026-04-28
 ---
 
 # Skill: Knowledge Search & Tool Discovery
 
-> **知识搜索 + 工具发现 + 搜索后行动**。统一的知识检索流程：先查本地（Skills/Soul/Wiki）→ 再搜外部（Web/GitHub）→ 搜索完即行动。
+> **统一检索入口**：本地知识检索 + Web 调研 + 开源源码调研 + 工具发现。  
+> v2.0 已合并原 `research/web-research` 与 `research/source-code-research`。
 
 ## Trigger
 
@@ -51,7 +53,23 @@ created: 2026-04-14
 - 关键结论至少两个来源确认
 - 排除营销和过时内容
 
-### Step 3: 工具发现（需要工具时）
+### Step 3: 源码调研（实现问题场景）
+
+当问题属于“需要参考开源实现方式”，在 Step 2 基础上执行：
+
+1. `gh search repos "{关键词}" --limit 5`（候选项目）
+2. `gh search code "{关键词}" --limit 10`（实现片段）
+3. 选 1-2 个最近仍活跃的项目阅读关键模块
+4. 提炼“可借鉴模式”，禁止直接复制代码
+5. 记录检索路径和结论，便于复现
+
+**重点观察项**：
+- 接口边界与抽象层次
+- 错误处理与回退策略
+- 测试覆盖方式
+- 配置与扩展点设计
+
+### Step 4: 工具发现（需要工具时）
 
 1. **检测安装状态**：`which {tool_name}` 或 `{tool_name} --version`
 2. **已安装** → 记录版本号，跳到 Step 4
@@ -62,7 +80,7 @@ created: 2026-04-14
    - 黑名单 → 拒绝并报告替代方案
 5. **安装后三步记录**：验证安装 → 创建 Skill.md → 记录 Soul.md
 
-### Step 4: 搜索完成后的标准动作
+### Step 5: 搜索完成后的标准动作
 
 **搜索代码后立即行动**（线性执行，无分支）：
 
@@ -85,6 +103,8 @@ created: 2026-04-14
 ## Rules
 
 - 本地搜索零成本且高度相关，必须作为第一选择
+- 先本地再外部，禁止一上来直接 WebSearch
+- 调研代码只借鉴设计，不复制实现
 - 安装前必须检查白名单
 - 搜索完即行动，不做多余考古
 - 不搜索就直接执行 = 臆断 = 质量差

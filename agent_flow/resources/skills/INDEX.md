@@ -8,7 +8,7 @@ tags: [index, meta, skills]
 confidence: 1.0
 status: verified
 created: 2026-04-16
-updated: 2026-04-27
+updated: 2026-04-28
 ---
 
 # Skills 技能索引
@@ -26,13 +26,16 @@ updated: 2026-04-27
 - `knowledge` — 知识检索与晋升
 - `development` — 开发与代码质量
 - `documentation` — 文档处理
-- `research` — 研究与检索
+- `research` — 工具前置检查
 
 ## Keyword Quick Map（关键词速查）
 
 - `飞书` `lark` `lark-cli` `feishu` `wiki token` `obj_token` `docs +search`:
   - `/Users/sunyi/.agents/skills/lark-shared/SKILL.md`
   - `/Users/sunyi/.agents/skills/lark-doc/SKILL.md`
+- `飞书需求链接` `本地优先检索` `wiki fallback` `websearch fallback`:
+  - [knowledge-search](knowledge/knowledge-search/SKILL.md)
+  - [pre-flight-check](workflow/pre-flight-check/SKILL.md)
 - `日历` `会议` `空闲时间` `calendar`:
   - `/Users/sunyi/.agents/skills/lark-calendar/SKILL.md`
 - `多维表格` `base` `bitable`:
@@ -47,8 +50,17 @@ updated: 2026-04-27
   - `/Users/sunyi/.agents/skills/lark-openapi-explorer/SKILL.md`
   - `agent_flow/resources/wiki/tools/mai-jira-cli.md`
   - [jira-search-to-dev](workflow/jira-search-to-dev/SKILL.md)
+- `plugin` `插件` `hook注册` `settings.local.json` `plugin verify`:
+  - `agent_flow/resources/wiki/tools/claude-code-plugin-hooks.md`
+- `CLAUDE.md模板` `AGENTS.md模板` `项目协议模板`:
+  - `agent_flow/resources/wiki/patterns/project/claude-template.md`
+  - `agent_flow/resources/wiki/patterns/project/agents-template.md`
 - `需求拆解` `前后端划分` `验收点`:
   - [requirement-decomposition](documentation/requirement-decomposition/SKILL.md)
+- `UI需求` `功能需求` `前端需求列表` `project-structure模板`:
+  - [requirement-decomposition](documentation/requirement-decomposition/SKILL.md)
+  - `agent_flow/resources/wiki/patterns/requirement/frontend-requirement-list-template.md`
+  - `agent_flow/resources/wiki/patterns/requirement/project-structure-template.md`
 - `同事圈` `公司圈` `company circles` `ref-company-circles`:
   - [knowledge-search](knowledge/knowledge-search/SKILL.md)
   - [requirement-decomposition](documentation/requirement-decomposition/SKILL.md)
@@ -58,13 +70,11 @@ updated: 2026-04-27
 - [pre-flight-check](workflow/pre-flight-check/SKILL.md) — 任务入口检查
 - [subtask-guard](workflow/subtask-guard/SKILL.md) — 子任务执行前搜索
 - [phase-review](workflow/phase-review/SKILL.md) — 阶段总结与用户门控
-- [task-complexity](workflow/task-complexity/SKILL.md) — 复杂度评估
 - [acceptance-check](workflow/acceptance-check/SKILL.md) — 交付验收
 - [jira-search-to-dev](workflow/jira-search-to-dev/SKILL.md) — Jira 搜索到开发中的建单与流转
 
 ## Agent-Orchestration（多 Agent 编排）
 
-- [agent-orchestration](agent-orchestration/agent-orchestration/SKILL.md)
 - [main-agent-dispatch](agent-orchestration/main-agent-dispatch/SKILL.md)
 - [orchestrator-worker](agent-orchestration/orchestrator-worker/SKILL.md)
 
@@ -90,6 +100,6 @@ updated: 2026-04-27
 
 ## Research（研究与发现）
 
-- [source-code-research](research/source-code-research/SKILL.md)
-- [web-research](research/web-research/SKILL.md)
-- [tool-precheck](research/tool-precheck/SKILL.md)
+- [tool-precheck](knowledge/tool-precheck/SKILL.md)
+
+> 注：`web-research` 与 `source-code-research` 已并入 [knowledge-search](knowledge/knowledge-search/SKILL.md)。

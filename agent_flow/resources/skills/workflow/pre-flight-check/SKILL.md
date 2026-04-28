@@ -45,6 +45,11 @@ updated: 2026-04-14
 4. 如 .dev-workflow/ 不存在但 .agent-flow/ 存在：
    → 提示用户："本项目没有 .dev-workflow/，是否要初始化？(agent-flow init --dev-workflow)"
    → 用户拒绝 → 继续使用 .agent-flow/ 即 Layer 2
+
+5. Hook/插件就绪检查（新增）：
+   ├─ `.claude/settings.json` 或 `.claude/settings.local.json` 中是否存在 Agent-flow hooks？
+   ├─ 当前任务依赖插件（如 lark-cli、jira-cli）是否可用？
+   └─ 缺失时先补齐；`hook-readiness-guard` 会硬阻断代码修改和变更命令
 ```
 
 **缓存失效条件**（任一满足则重新生成）：
@@ -56,10 +61,10 @@ updated: 2026-04-14
 
 ### Step 2: 任务复杂度量化评估（v3.0 改进）
 
-**调用 `task-complexity` Skill** 执行 5 维量化评分，替代主观 S/M/X 判断：
+在本 Step 内直接执行 5 维量化评分（原 `task-complexity` 内容已并入此处），替代主观 S/M/X 判断：
 
 ```text
-调用 task-complexity skill → 逐维评分（范围/跨模块/新颖度/风险/外部依赖）→ 总分 0-10
+在 pre-flight-check Step 2 内完成评分 → 逐维评分（范围/跨模块/新颖度/风险/外部依赖）→ 总分 0-10
 
 0-3  → Simple  (快速路径)
 4-6  → Medium  (标准路径)
@@ -100,6 +105,13 @@ updated: 2026-04-14
 - Simple: 只做搜索2+5（全局 Skills + 全局 Wiki）
 - Medium: 全部 5 步
 - Complex: 全部 5 步 + 强制 `WebSearch "{任务关键词} best practice"`
+
+**飞书需求文档特殊顺序（新增）**：
+- 若输入包含 `feishu.cn/wiki` 或飞书文档线索，必须先完成：
+  1. 项目级 wiki/skills 检索
+  2. 团队级 wiki/skills 检索
+  3. 仅当前两层都无结果时才允许 WebSearch
+- 禁止直接 WebSearch 作为第一步
 
 **有结果** → 读取匹配的 Skill/Wiki，记录到分析文档。
 **全部无结果** → `WebSearch "{任务关键词} best practice"` → 网络搜索
@@ -214,11 +226,14 @@ summary={用户确认摘要}
 
 - **不可跳过**：每个任务开始前必须执行全部7个Step
 - **先查后执行**：Step 3 是所有后续执行的前提，不搜索就执行 = 违规
-- **复杂度量化**：Step 2 必须调用 task-complexity skill 执行 5 维量化评分，不可主观判断
+- **复杂度量化**：Step 2 必须执行 5 维量化评分，不可主观判断
 - **分级执行**：根据复杂度等级调整搜索深度、门控强度、验收要求，不要一刀切
 - **GO/NO-GO**：Simple 无需、Medium Plan 门控、Complex 每阶段门控
 - **文档驱动**：分析和计划必须写入文件，不能只在脑中完成
 - **不确定就问**：有模糊点立即停止并询问用户（铁律3）
+- **提问后复判**：每次澄清后必须复判“是否已可开工”，可开工则停止继续追问
+- **澄清复判硬闸**：每次 AskUserQuestion 后必须完成 `.clarification-recheck-done`，否则 `clarification-guard` 阻断实现
+- **自动化节奏硬闸**：禁止连续“问一步停一步”；`clarification-guard` 会在无进展时阻断重复停顿
 - **子任务守卫**：每个子任务执行前必须调用 subtask-guard 技能搜索知识库
 - **临界知识预加载**：检查 Soul.md 临界知识区是否有与当前任务相关的工具条目
 - **用户验收闸**：推送代码前必须有用户验收标记(.user-acceptance-done)，hook 强制执行
@@ -226,6 +241,6 @@ summary={用户确认摘要}
 ## 变更历史
 
 - v3.1.0 (2026-04-14): Step 7 新增用户验收标记说明，与 user-acceptance-guard.py hook 联动
-- v3.0.0 (2026-04-14): Step 2 改为调用 task-complexity skill 5 维量化评分；Step 3 按复杂度调整搜索深度；Step 7 GO/NO-GO 按复杂度分级；新增临界知识预加载规则
+- v3.0.0 (2026-04-14): Step 2 改为 5 维量化评分；Step 3 按复杂度调整搜索深度；Step 7 GO/NO-GO 按复杂度分级；新增临界知识预加载规则
 - v2.0.0 (2026-04-14): 新增任务复杂度分级(S/M/X)；新增 RPI 阶段规划；新增 GO/NO-GO 门控；新增环境变量优化检查；执行计划增加执行方式标注
 - v1.0.0 (2026-04-13): 初始版本
