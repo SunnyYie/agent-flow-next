@@ -15,8 +15,8 @@ tags: [agent-flow, init, project, settings.local.json, plugin-hooks]
 
 在当前项目完成以下动作：
 
-1. 初始化 `.agent-flow/` 目录
-2. 安装并启用项目级插件
+1. 使用agent-flow CLI初始化.agent-flow（project scope）
+2. 安装需要的插件（可选，但推荐至少安装 workflow-guards、workflow-pipeline、mcp-factory 等核心插件）
 3. 将插件 hooks 同步到 `.claude/settings.local.json`
 4. 验证 hooks 与 effective plugins 一致
 
@@ -69,9 +69,9 @@ agent-flow plugin verify
 
 ## 常见问题
 
-1. `plugin verify` 有 missing hooks  
+1. `plugin verify` 有 missing hooks
    先执行 `agent-flow plugin list` 确认插件是否 enabled，再执行一次 `agent-flow plugin enable <name> --scope project` 触发重同步。
 
-2. 项目没有 `.claude/settings.local.json`  
+2. 项目没有 `.claude/settings.local.json`
    通常是还未安装任一含 hooks 的插件；先 `plugin install` 后再 `plugin verify`。
 

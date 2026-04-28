@@ -3,7 +3,10 @@
 
 from __future__ import annotations
 
+import json
 import os
+import shlex
+import shutil
 from pathlib import Path
 
 CANONICAL_PLAN_HEADERS = [
@@ -129,3 +132,110 @@ def structured_marker_exists(path: Path, required: tuple[str, ...]) -> bool:
         if all(entry.get(key, "").strip() for key in required):
             return True
     return False
+
+
+# ---- Shared code-change detection helpers ----
+
+CODE_EXTENSIONS = {
+    ".ts", ".tsx", ".js", ".jsx", ".py", ".rs", ".go", ".java", ".kt",
+    ".swift", ".m", ".h", ".c", ".cpp", ".rb", ".php", ".vue", ".svelte",
+    ".css", ".scss", ".less", ".html", ".sql", ".graphql", ".sh", ".bash", ".zsh",
+}
+
+CODE_FILENAMES = {
+    "package.json", "tsconfig.json", "Makefile", "Dockerfile", "Podfile", "Gemfile",
+    "build.gradle", "settings.gradle", "app.json", "babel.config.js", "metro.config.js",
+}
+
+ALLOWED_PATH_PREFIXES = (".agent-flow", ".dev-workflow", ".claude")
+
+READONLY_BASH_PREFIXES = (
+    "ls", "cat", "head", "tail", "find", "grep", "rg", "wc", "which", "pwd", "whoami",
+    "uname", "env", "printenv", "echo", "type ", "command ", "git status", "git log",
+    "git diff", "git branch", "git remote", "git rev-parse", "git show",
+)
+
+
+def is_code_file(file_path: str) -> bool:
+    for prefix in ALLOWED_PATH_PREFIXES:
+        if prefix in file_path:
+            return False
+    _, ext = os.path.splitext(file_path)
+    if ext.lower() in CODE_EXTENSIONS:
+        return True
+    return os.path.basename(file_path) in CODE_FILENAMES
+
+
+def is_readonly_bash(command: str) -> bool:
+    cmd = command.strip()
+    return any(cmd.startswith(prefix) for prefix in READONLY_BASH_PREFIXES)
+
+
+# ---- Hook / tool readiness helpers ----
+
+def has_agent_flow_hooks(project_root: Path) -> bool:
+    """Check whether .claude/settings*.json registers any agent-flow hooks."""
+    for settings in [project_root / ".claude" / "settings.local.json", project_root / ".claude" / "settings.json"]:
+        if not settings.is_file():
+            continue
+        try:
+            data = json.loads(settings.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        hooks = data.get("hooks")
+        if not isinstance(hooks, dict):
+            continue
+        text = json.dumps(hooks, ensure_ascii=False).lower()
+        if "agent-flow" in text or "agent_flow" in text:
+            return True
+    return False
+
+
+def agent_flow_hook_registration_status(project_root: Path) -> tuple[bool, list[str]]:
+    """Return (ok, missing_paths) for agent-flow hook command registrations."""
+    missing: list[str] = []
+    has_registration = False
+    settings_files = [project_root / ".claude" / "settings.local.json", project_root / ".claude" / "settings.json"]
+
+    for settings in settings_files:
+        if not settings.is_file():
+            continue
+        try:
+            data = json.loads(settings.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        hooks = data.get("hooks")
+        if not isinstance(hooks, dict):
+            continue
+        for event_entries in hooks.values():
+            if not isinstance(event_entries, list):
+                continue
+            for entry in event_entries:
+                if not isinstance(entry, dict):
+                    continue
+                for hook in entry.get("hooks", []):
+                    if not isinstance(hook, dict) or hook.get("type") != "command":
+                        continue
+                    command = str(hook.get("command", "")).strip()
+                    lowered = command.lower()
+                    if "agent-flow" not in lowered and "agent_flow" not in lowered:
+                        continue
+                    has_registration = True
+                    parts = shlex.split(command)
+                    if len(parts) < 2:
+                        continue
+                    script = parts[1]
+                    script_path = Path(script)
+                    if not script_path.is_absolute():
+                        script_path = (project_root / script_path).resolve()
+                    if not script_path.exists():
+                        missing.append(str(script_path))
+
+    if not has_registration:
+        return False, []
+    return len(missing) == 0, sorted(set(missing))
+
+
+def is_cli_available(cli_name: str) -> bool:
+    """Check whether a CLI tool is on the current PATH."""
+    return shutil.which(cli_name) is not None

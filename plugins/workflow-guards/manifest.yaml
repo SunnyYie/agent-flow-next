@@ -20,6 +20,9 @@ hooks:
   - path: hooks/preflight-enforce.py
     event: PreToolUse
     matcher: "Write|Edit|Bash"
+  - path: hooks/hook-readiness-guard.py
+    event: PreToolUse
+    matcher: "Write|Edit|Bash"
   - path: hooks/dev-workflow-enforce.py
     event: PreToolUse
     matcher: "Write|Edit|Bash"

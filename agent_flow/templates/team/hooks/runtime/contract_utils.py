@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import shlex
 from pathlib import Path
 
 CANONICAL_PLAN_HEADERS = [
@@ -188,6 +189,51 @@ def has_agent_flow_hooks(project_root: Path) -> bool:
         if "agent-flow" in text or "agent_flow" in text:
             return True
     return False
+
+
+def agent_flow_hook_registration_status(project_root: Path) -> tuple[bool, list[str]]:
+    """Return (ok, missing_paths) for agent-flow hook command registrations."""
+    missing: list[str] = []
+    has_registration = False
+    settings_files = [project_root / ".claude" / "settings.local.json", project_root / ".claude" / "settings.json"]
+
+    for settings in settings_files:
+        if not settings.is_file():
+            continue
+        try:
+            data = json.loads(settings.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        hooks = data.get("hooks")
+        if not isinstance(hooks, dict):
+            continue
+        for event_entries in hooks.values():
+            if not isinstance(event_entries, list):
+                continue
+            for entry in event_entries:
+                if not isinstance(entry, dict):
+                    continue
+                for hook in entry.get("hooks", []):
+                    if not isinstance(hook, dict) or hook.get("type") != "command":
+                        continue
+                    command = str(hook.get("command", "")).strip()
+                    lowered = command.lower()
+                    if "agent-flow" not in lowered and "agent_flow" not in lowered:
+                        continue
+                    has_registration = True
+                    parts = shlex.split(command)
+                    if len(parts) < 2:
+                        continue
+                    script = parts[1]
+                    script_path = Path(script)
+                    if not script_path.is_absolute():
+                        script_path = (project_root / script_path).resolve()
+                    if not script_path.exists():
+                        missing.append(str(script_path))
+
+    if not has_registration:
+        return False, []
+    return len(missing) == 0, sorted(set(missing))
 
 
 def is_cli_available(cli_name: str) -> bool:

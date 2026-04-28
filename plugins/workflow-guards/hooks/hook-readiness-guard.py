@@ -1,29 +1,20 @@
 #!/usr/bin/env python3
-"""Hard-block execution when hook/tool readiness is not satisfied.
-
-PreToolUse guard:
-1) Block code-changing actions when .claude/settings*.json does not register
-   any agent-flow hooks.
-2) Block lark-cli/jira commands when the binary is unavailable in current PATH.
-"""
+"""Hard-block execution when hook/tool readiness is not satisfied."""
 
 from __future__ import annotations
 
 import json
 import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from contract_utils import (
+    NO_RETRY_LINE,
+    UNBLOCK_SUFFIX,
     agent_flow_hook_registration_status,
     find_project_root,
     has_agent_flow_hooks,
     is_cli_available,
     is_code_file,
     is_readonly_bash,
-    NO_RETRY_LINE,
-    UNBLOCK_SUFFIX,
 )
 
 
@@ -79,7 +70,6 @@ def main() -> None:
     tool_name = payload.get("tool_name", "")
     tool_input = payload.get("tool_input", {})
 
-    # lark-cli / jira 命令可执行性硬检查
     if tool_name == "Bash":
         command = str(tool_input.get("command", "")).strip()
         if command.startswith("lark-cli") and not is_cli_available("lark-cli"):
@@ -89,7 +79,6 @@ def main() -> None:
             _block_for_missing_cli("jira", command)
             sys.exit(2)
 
-    # hooks 就绪硬检查（仅拦截可变更操作）
     has_hooks = has_agent_flow_hooks(project_root)
     hooks_ok, missing_paths = agent_flow_hook_registration_status(project_root)
     if has_hooks and hooks_ok:
