@@ -101,7 +101,6 @@ READONLY_BASH_PREFIXES = (
     "git switch",
     "git pull",
     "git fetch",
-    "lark-cli",
     "agent-flow",
     "python3",
     "python",
@@ -123,6 +122,15 @@ READONLY_BASH_PREFIXES = (
     "unzip",
     "xxd",
     "curl",
+)
+
+LARK_SAFE_PREFIXES = (
+    "lark-cli schema ",
+    "lark-cli --help",
+    "lark-cli help",
+    "lark-cli --version",
+    "lark-cli doctor",
+    "lark-cli auth ",
 )
 
 CHAIN_PROMPT = f"""[AgentFlow BLOCKED] 思维链未完成 — 你没有先搜索知识库就尝试执行！
@@ -172,6 +180,8 @@ def is_code_file(file_path: str) -> bool:
 
 def is_readonly_bash(command: str) -> bool:
     cmd = command.strip()
+    if any(cmd.startswith(prefix) for prefix in LARK_SAFE_PREFIXES):
+        return True
     return any(cmd.startswith(prefix) for prefix in READONLY_BASH_PREFIXES)
 
 
@@ -226,7 +236,7 @@ def main() -> None:
     if has_recent_search(marker_file, project_root):
         sys.exit(0)
 
-    print(f"{CHAIN_PROMPT}\n目标: {target_desc}")
+    print(f"{CHAIN_PROMPT}\n目标: {target_desc}", file=sys.stderr)
     sys.exit(2)
 
 

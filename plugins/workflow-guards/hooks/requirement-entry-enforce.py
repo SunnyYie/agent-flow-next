@@ -104,7 +104,7 @@ def main() -> None:
     if tool_name in {"Write", "Edit", "MultiEdit"}:
         file_path = str(tool_input.get("file_path", ""))
         if file_path and _is_code_file(file_path):
-            print(_block_message(state, file_path))
+            print(_block_message(state, file_path), file=sys.stderr)
             sys.exit(2)
         sys.exit(0)
 
@@ -114,7 +114,7 @@ def main() -> None:
             sys.exit(0)
         if command.startswith("agent-flow init"):
             sys.exit(0)
-        print(_block_message(state, command[:120]))
+        print(_block_message(state, command[:120]), file=sys.stderr)
         sys.exit(2)
 
     sys.exit(0)

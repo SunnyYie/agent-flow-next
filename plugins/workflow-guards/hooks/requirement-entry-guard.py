@@ -40,6 +40,16 @@ TASK_HINTS = (
     "流程",
 )
 
+DESIGN_HINTS = (
+    "设计图",
+    "设计稿",
+    "效果图",
+    "原型",
+    "ui 图",
+    "下载图片",
+    "download image",
+)
+
 
 def _extract_prompt_text(raw: str) -> str:
     if not raw.strip():
@@ -136,6 +146,7 @@ def _write_state(
         "fewshots_read": False,
         "agent_flow_ready": has_agent_flow,
         "init_status": init_status.strip(),
+        "allow_design_assets": any(hint in prompt.lower() for hint in DESIGN_HINTS),
     }
     state_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return state_path
