@@ -7,6 +7,9 @@ AgentFlow Pre-Flight Guard — UserPromptSubmit hook
 """
 import os
 import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from contract_utils import find_project_root, has_agent_flow_hooks, is_cli_available
 

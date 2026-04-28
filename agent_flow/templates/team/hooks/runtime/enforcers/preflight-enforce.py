@@ -10,6 +10,9 @@ v2.0 新增：Simple 任务（快速路径）简化 pre-flight 要求，
 import json
 import os
 import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from contract_utils import (
     NO_RETRY_LINE,

@@ -92,6 +92,27 @@ HOOK_SCENE_BY_NAME = {
 }
 HOOK_TYPE_BY_NAME = {
     "promotion-guard.py": "governance",
+    "dev-workflow-enforce.py": "runtime/enforcers",
+    "parallel-enforce.py": "runtime/enforcers",
+    "preflight-enforce.py": "runtime/enforcers",
+    "project-structure-enforce.py": "runtime/enforcers",
+    "self-questioning-enforce.py": "runtime/enforcers",
+    "subtask-guard-enforce.py": "runtime/enforcers",
+    "clarification-guard.py": "runtime/guards",
+    "git-branch-guard.py": "runtime/guards",
+    "hook-readiness-guard.py": "runtime/guards",
+    "jira-workflow-guard.py": "runtime/guards",
+    "mcp-tool-factory-guard.py": "runtime/guards",
+    "preflight-guard.py": "runtime/guards",
+    "project-init-guard.py": "runtime/guards",
+    "user-acceptance-guard.py": "runtime/guards",
+    "websearch-fallback-guard.py": "runtime/guards",
+    "clarification-tracker.py": "runtime/trackers",
+    "jira-context-tracker.py": "runtime/trackers",
+    "search-tracker.py": "runtime/trackers",
+    "code-review-remind.py": "runtime/reminders",
+    "error-search-remind.py": "runtime/reminders",
+    "phase-reminder.py": "runtime/reminders",
 }
 
 

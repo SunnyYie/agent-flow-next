@@ -35,8 +35,14 @@ TEAM_HOOKS_PROFILES = {TEAM_HOOKS_PROFILE_MINIMAL, TEAM_HOOKS_PROFILE_FULL}
 
 MINIMAL_TEAM_HOOK_FILES = {
     "runtime/contract_utils.py",
-    "runtime/project-init-guard.py",
-    "runtime/preflight-guard.py",
+    "runtime/guards/project-init-guard.py",
+    "runtime/guards/preflight-guard.py",
+    "runtime/guards/websearch-fallback-guard.py",
+    "runtime/guards/hook-readiness-guard.py",
+    "runtime/guards/clarification-guard.py",
+    "runtime/trackers/clarification-tracker.py",
+    "runtime/guards/jira-workflow-guard.py",
+    "runtime/trackers/jira-context-tracker.py",
 }
 
 PROJECT_DEFAULT_DIRS = [
@@ -421,7 +427,7 @@ def _build_wiki_index(global_root: Path) -> str:
         "",
         "- 流程模式检索: `" + _prefer(["patterns/workflow/search-before-execute.md"], "patterns/workflow/*") + "`",
         "- 架构与决策检索: `" + _prefer(["patterns/architecture/adr-decision-record.md"], "patterns/architecture/*") + "`",
-        "- 故障与踩坑排查: `" + _prefer(["pitfalls/workflow/execute-without-search.md"], "pitfalls/*") + "`",
+        "- 故障与踩坑排查: `" + _prefer(["patterns/workflow/search-before-execute.md"], "pitfalls/*") + "`",
         "- 角色与记忆模型: `" + _prefer(["concepts/agent-roles.md", "concepts/memory-systems.md"], "concepts/*") + "`",
         "- 安全相关基线: `" + _prefer(["concepts/permission-gradation.md", "pitfalls/security/path-traversal-bypass.md"], "security/*") + "`",
         "",
@@ -797,7 +803,7 @@ def _build_project_wiki_index(project_root: Path, global_root: Path, team_root: 
         "",
         "- 流程模式检索: `" + _prefer(["patterns/workflow/search-before-execute.md"], "patterns/workflow/*") + "`",
         "- 架构与决策检索: `" + _prefer(["patterns/architecture/adr-decision-record.md"], "patterns/architecture/*") + "`",
-        "- 故障与踩坑排查: `" + _prefer(["pitfalls/workflow/execute-without-search.md"], "pitfalls/*") + "`",
+        "- 故障与踩坑排查: `" + _prefer(["patterns/workflow/search-before-execute.md"], "pitfalls/*") + "`",
         "- 角色与记忆模型: `" + _prefer(["concepts/agent-roles.md", "concepts/memory-systems.md"], "concepts/*") + "`",
         "- 安全相关基线: `" + _prefer(["concepts/permission-gradation.md"], "security/*") + "`",
         "",
@@ -910,6 +916,57 @@ def _write_project_readme(project_root: Path, project_name: str) -> None:
     (project_root / "README.md").write_text(content, encoding="utf-8")
 
 
+def _extract_markdown_fenced_body(raw: str) -> str:
+    marker = "```markdown"
+    start = raw.find(marker)
+    if start == -1:
+        return ""
+    start += len(marker)
+    end = raw.find("```", start)
+    if end == -1:
+        return ""
+    body = raw[start:end].strip()
+    return body + ("\n" if body and not body.endswith("\n") else "")
+
+
+def _render_project_level_doc_from_template(
+    global_root: Path,
+    template_rel_path: str,
+    fallback_title: str,
+) -> str:
+    template_path = global_root / "wiki" / template_rel_path
+    if not template_path.exists():
+        template_path = bundled_resources_root() / "wiki" / template_rel_path
+    if template_path.exists():
+        try:
+            raw = template_path.read_text(encoding="utf-8")
+            body = _extract_markdown_fenced_body(raw)
+            if body:
+                return body
+        except OSError:
+            pass
+    return f"# {fallback_title}\n\n> 请补充项目级协议内容。参考模板：agent_flow/resources/wiki/{template_rel_path}\n"
+
+
+def _write_project_protocol_docs(project_dir: Path, project_name: str, global_root: Path) -> None:
+    claude_path = project_dir / "CLAUDE.md"
+    agents_path = project_dir / "AGENTS.md"
+
+    claude_content = _render_project_level_doc_from_template(
+        global_root=global_root,
+        template_rel_path="patterns/project/claude-template.md",
+        fallback_title=f"CLAUDE.md ({project_name})",
+    )
+    agents_content = _render_project_level_doc_from_template(
+        global_root=global_root,
+        template_rel_path="patterns/project/agents-template.md",
+        fallback_title="AGENTS.md",
+    )
+
+    ensure_file(claude_path, claude_content)
+    ensure_file(agents_path, agents_content)
+
+
 def init_project(project_dir: Path) -> Path:
     root = _ensure_layout(layer_root("project", project_dir=project_dir), PROJECT_DEFAULT_DIRS)
     _prune_non_project_hook_scenes(project_root=root)
@@ -930,6 +987,7 @@ def init_project(project_dir: Path) -> Path:
     team_root = layer_root("team", team_id=cfg.team_id, project_dir=project_dir) if cfg.team_id else None
     _write_project_index_docs(root, global_root=global_root, team_root=team_root)
     _write_project_readme(root, cfg.name)
+    _write_project_protocol_docs(project_dir=Path(project_dir), project_name=cfg.name, global_root=global_root)
     return root
 
 
