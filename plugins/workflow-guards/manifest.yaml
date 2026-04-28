@@ -5,6 +5,12 @@ description: Workflow guard hooks migrated from legacy agent-flow
 namespace: workflow-guards
 commands: []
 hooks:
+  - path: hooks/requirement-entry-guard.py
+    event: UserPromptSubmit
+    matcher: ""
+  - path: hooks/requirement-entry-enforce.py
+    event: PreToolUse
+    matcher: "Write|Edit|MultiEdit|Bash"
   - path: hooks/preflight-guard.py
     event: UserPromptSubmit
     matcher: ""
@@ -36,6 +42,9 @@ hooks:
     event: PreToolUse
     matcher: "Write|Edit|Bash"
   - path: hooks/search-tracker.py
+    event: PostToolUse
+    matcher: ""
+  - path: hooks/requirement-entry-tracker.py
     event: PostToolUse
     matcher: ""
   - path: hooks/error-search-remind.py
