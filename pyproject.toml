@@ -33,3 +33,13 @@ target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["agent_flow"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "agent_flow",
+  "README.md",
+  "pyproject.toml",
+]
