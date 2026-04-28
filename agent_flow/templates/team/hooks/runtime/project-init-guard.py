@@ -81,7 +81,11 @@ def main() -> None:
         print(
             f"<system-reminder>\n"
             f"[AgentFlow] 自动初始化完成！已创建 .agent-flow/ 和 .dev-workflow/。\n"
-            f"下一步：按 .dev-workflow/Agent.md 启动协议工作。\n"
+            f"并已自动生成项目根目录 CLAUDE.md / AGENTS.md（若原先不存在）。\n"
+            f"下一步：\n"
+            f"1) 检查 .claude/settings*.json 是否已注册 agent-flow hooks\n"
+            f"2) 检查关键工具是否可用（lark-cli/jira）\n"
+            f"3) 按 .dev-workflow/Agent.md 启动协议工作。\n"
             f"</system-reminder>"
         )
     else:

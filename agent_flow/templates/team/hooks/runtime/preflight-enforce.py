@@ -144,7 +144,7 @@ def main():
                 f"[AgentFlow BLOCKED] 任务复杂度未评估，禁止修改代码文件: {file_path}\n"
                 f"{NO_RETRY_LINE}\n\n"
                 f"✅ 解除方法：\n"
-                f"  执行 task-complexity skill → 创建 .agent-flow/state/.complexity-level\n"
+                f"  执行 pre-flight-check Step 2 → 创建 .agent-flow/state/.complexity-level\n"
                 f"  {UNBLOCK_SUFFIX}"
             )
         sys.exit(2)
@@ -171,7 +171,7 @@ def main():
                 f"[AgentFlow BLOCKED] 任务复杂度未评估，禁止执行命令: {command[:80]}\n"
                 f"{NO_RETRY_LINE}\n\n"
                 f"✅ 解除方法：\n"
-                f"  执行 task-complexity skill → 创建 .agent-flow/state/.complexity-level\n"
+                f"  执行 pre-flight-check Step 2 → 创建 .agent-flow/state/.complexity-level\n"
                 f"  {UNBLOCK_SUFFIX}"
             )
         sys.exit(2)

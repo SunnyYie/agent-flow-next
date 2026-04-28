@@ -14,7 +14,7 @@ DEV_IRON_LAWS = """
 2. 修改代码前必须先创建实施计划文档（requirement-decomposition.md 或 ## 实施计划 章节）
 3. 遇到错误禁止自行推测，必须搜索 Skill/Wiki 或询问用户
 4. 执行 MR 等操作前必须先搜索相关 Skill 并按 Procedure 执行
-5. 任务开始前必须执行 task-complexity skill 进行 5 维量化评估（无 .complexity-level 标记 → 代码修改被阻断）
+5. 任务开始前必须执行 pre-flight-check Step 2 进行 5 维量化评估（无 .complexity-level 标记 → 代码修改被阻断）
 6. VERIFY 后、REFLECT 前必须执行 self-questioning skill（无 .self-questioning-done 标记 → REFLECT 被阻断）
 
 【思维链】执行每个子任务的硬性要求（无搜索标记 → Hook 阻断执行）：
@@ -140,7 +140,7 @@ def main():
         complexity_marker = ".agent-flow/state/.complexity-level"
         complexity_warning = ""
         if not os.path.isfile(complexity_marker):
-            complexity_warning = "\n\n[AgentFlow WARNING] 当前任务的复杂度评估(complexity-level)未完成！\n请先执行 task-complexity skill，创建 .complexity-level 标记后再修改代码。"
+            complexity_warning = "\n\n[AgentFlow WARNING] 当前任务的复杂度评估(complexity-level)未完成！\n请先执行 pre-flight-check Step 2，创建 .complexity-level 标记后再修改代码。"
 
         # 检查需求澄清标记（v3.0 新增）
         clarified_marker = ".agent-flow/state/.requirement-clarified"

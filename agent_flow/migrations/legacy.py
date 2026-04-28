@@ -19,7 +19,6 @@ NON_GENERIC_KEYWORDS = [
     "lark",
 ]
 GENERIC_SKILL_ALLOWLIST = {
-    ("agent-orchestration", "agent-orchestration"),
     ("agent-orchestration", "orchestrator-worker"),
     ("agent-orchestration", "main-agent-dispatch"),
     ("development", "architecture-design"),
@@ -37,10 +36,7 @@ GENERIC_SKILL_ALLOWLIST = {
     ("workflow", "phase-review"),
     ("workflow", "pre-flight-check"),
     ("workflow", "subtask-guard"),
-    ("research", "source-code-research"),
-    ("research", "web-research"),
     ("research", "tool-precheck"),
-    ("workflow", "task-complexity"),
     ("g", "g"),  # test fixture compatibility
 }
 GENERIC_WIKI_ALLOWLIST = {
@@ -58,7 +54,6 @@ GENERIC_WIKI_ALLOWLIST = {
     "patterns/document/requirements-spec-template.md",
     "pitfalls/llm-coding/overcomplication.md",
     "pitfalls/llm-coding/drive-by-refactoring.md",
-    "pitfalls/workflow/execute-without-search.md",
     "pitfalls/workflow/skip-implementation-plan.md",
 }
 GENERIC_HOOKS = {
@@ -71,7 +66,6 @@ TEAM_STANDARD_HOOKS = {
     "dev-workflow-enforce.py",
     "error-search-remind.py",
     "git-branch-guard.py",
-    "implementation-clarification-guard.py",
     "mcp-tool-factory-guard.py",
     "parallel-enforce.py",
     "phase-reminder.py",
@@ -82,7 +76,6 @@ TEAM_STANDARD_HOOKS = {
     "search-tracker.py",
     "self-questioning-enforce.py",
     "subtask-guard-enforce.py",
-    "thinking-chain-enforce.py",
     "user-acceptance-guard.py",
 }
 PLATFORM_HOOKS = {

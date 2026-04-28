@@ -8,13 +8,15 @@ AgentFlow Pre-Flight Guard — UserPromptSubmit hook
 import os
 import sys
 
+from contract_utils import find_project_root, has_agent_flow_hooks, is_cli_available
+
 DEV_IRON_LAWS = """
 【开发铁律】违反将被 Hook 拦截：
 1. 修改代码前必须先创建 feature 分支（禁止在 main 上开发）
 2. 修改代码前必须先创建实施计划文档（requirement-decomposition.md 或 ## 实施计划 章节）
 3. 遇到错误禁止自行推测，必须搜索 Skill/Wiki 或询问用户
 4. 执行 MR 等操作前必须先搜索相关 Skill 并按 Procedure 执行
-5. 任务开始前必须执行 task-complexity skill 进行 5 维量化评估（无 .complexity-level 标记 → 代码修改被阻断）
+5. 任务开始前必须执行 pre-flight-check Step 2 进行 5 维量化评估（无 .complexity-level 标记 → 代码修改被阻断）
 6. VERIFY 后、REFLECT 前必须执行 self-questioning skill（无 .self-questioning-done 标记 → REFLECT 被阻断）
 
 【思维链】执行每个子任务的硬性要求（无搜索标记 → Hook 阻断执行）：
@@ -89,6 +91,7 @@ def main():
 
     # Detect content quality issues (files exist but lack project context)
     content_issues = []
+    runtime_issues = []
     if has_dev_workflow:
         agent_md = ".dev-workflow/Agent.md"
         if os.path.isfile(agent_md):
@@ -103,6 +106,20 @@ def main():
         structure_wiki = ".dev-workflow/wiki/project-structure.md"
         if not os.path.isfile(structure_wiki) or os.path.getsize(structure_wiki) < 50:
             content_issues.append("project-structure.md 缺失或为空（无 Tag→Directory 索引，运行 agent-flow init --dev-workflow --force 生成）")
+
+    # 检查 Claude hooks 是否已接入（新增）
+    project_root = find_project_root()
+    if project_root is not None:
+        if not has_agent_flow_hooks(project_root):
+            runtime_issues.append("`.claude/settings*.json` 未检测到 agent-flow hook 注册（规范无法强制执行）")
+    else:
+        runtime_issues.append("`.claude/settings*.json` 缺失（建议注册 agent-flow hooks）")
+
+    # 关键工具可用性提示（新增）
+    if not is_cli_available("lark-cli"):
+        runtime_issues.append("`lark-cli` 不在当前 shell PATH（飞书文档读取可能失败）")
+    if not is_cli_available("jira"):
+        runtime_issues.append("`jira` CLI 不在当前 shell PATH（Jira 建单流转可能失败）")
 
     # Output incomplete initialization warning
     incomplete_warning = ""
@@ -120,6 +137,13 @@ def main():
             f"\n\n[AgentFlow WARNING] 项目上下文不完整:\n"
             f"{content_str}\n"
             f"缺少项目上下文会导致 agent 盲目搜索代码，效率低下。"
+        )
+    if runtime_issues:
+        runtime_str = "\n".join(f"  - {issue}" for issue in runtime_issues)
+        incomplete_warning += (
+            f"\n\n[AgentFlow WARNING] 运行时治理能力未就绪:\n"
+            f"{runtime_str}\n"
+            f"建议先补齐 hooks/工具再进入需求与开发阶段。"
         )
 
     # 检查 pre-flight 是否已完成（current_phase.md 非空即为已规划）
@@ -140,7 +164,7 @@ def main():
         complexity_marker = ".agent-flow/state/.complexity-level"
         complexity_warning = ""
         if not os.path.isfile(complexity_marker):
-            complexity_warning = "\n\n[AgentFlow WARNING] 当前任务的复杂度评估(complexity-level)未完成！\n请先执行 task-complexity skill，创建 .complexity-level 标记后再修改代码。"
+            complexity_warning = "\n\n[AgentFlow WARNING] 当前任务的复杂度评估(complexity-level)未完成！\n请先执行 pre-flight-check Step 2，创建 .complexity-level 标记后再修改代码。"
 
         # 检查需求澄清标记（v3.0 新增）
         clarified_marker = ".agent-flow/state/.requirement-clarified"
