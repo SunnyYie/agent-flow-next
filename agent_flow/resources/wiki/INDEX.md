@@ -17,6 +17,7 @@
 - `Jira 流程闭环`：`patterns/workflow/jira-search-to-dev.md`
 - `Jira 工具`：`tools/mai-jira-cli.md`
 - `插件 Hook 接入`：`tools/claude-code-plugin-hooks.md`
+- `项目初始化`：`tools/project-init-agent-flow.md`
 
 ## Patterns（成功模式）
 
@@ -50,4 +51,5 @@
 ## Tools（工具）
 
 - `tools/claude-code-plugin-hooks.md`
+- `tools/project-init-agent-flow.md`
 - `tools/mai-jira-cli.md`

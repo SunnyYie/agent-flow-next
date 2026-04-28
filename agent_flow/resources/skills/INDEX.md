@@ -52,6 +52,8 @@ updated: 2026-04-28
   - [jira-search-to-dev](workflow/jira-search-to-dev/SKILL.md)
 - `plugin` `插件` `hook注册` `settings.local.json` `plugin verify`:
   - `agent_flow/resources/wiki/tools/claude-code-plugin-hooks.md`
+- `agent-flow初始化` `项目初始化` `agent-flow init` `.agent-flow`:
+  - `agent_flow/resources/wiki/tools/project-init-agent-flow.md`
 - `CLAUDE.md模板` `AGENTS.md模板` `项目协议模板`:
   - `agent_flow/resources/wiki/patterns/project/claude-template.md`
   - `agent_flow/resources/wiki/patterns/project/agents-template.md`
