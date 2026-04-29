@@ -20,6 +20,9 @@ hooks:
   - path: hooks/user-acceptance-guard.py
     event: UserPromptSubmit
     matcher: ""
+  - path: hooks/reflection-summary-guard.py
+    event: UserPromptSubmit
+    matcher: ""
   - path: hooks/parallel-enforce.py
     event: UserPromptSubmit
     matcher: ""
@@ -41,6 +44,9 @@ hooks:
   - path: hooks/workflow-enforce.py
     event: PreToolUse
     matcher: "Write|Edit|Bash"
+  - path: hooks/reflection-summary-enforce.py
+    event: PreToolUse
+    matcher: "Bash"
   - path: hooks/search-tracker.py
     event: PostToolUse
     matcher: ""
