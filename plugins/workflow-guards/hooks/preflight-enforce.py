@@ -11,6 +11,7 @@ import json
 import os
 import re
 import sys
+import traceback
 
 from contract_utils import (
     NO_RETRY_LINE,
@@ -94,6 +95,32 @@ def _emit_block(message: str, action: str) -> None:
     print(text, file=sys.stderr)
 
 
+def _state_snapshot(project_root) -> str:
+    phase_file = read_state_path(project_root, "current_phase.md")
+    complexity_file = read_state_path(project_root, ".complexity-level")
+    phase_exists = os.path.isfile(phase_file)
+    phase_size = os.path.getsize(phase_file) if phase_exists else 0
+    complexity_exists = os.path.isfile(complexity_file)
+    return (
+        f"state.current_phase.exists={phase_exists}, size={phase_size}; "
+        f"state.complexity.exists={complexity_exists}"
+    )
+
+
+def _emit_internal_error(project_root, err: Exception) -> None:
+    snapshot = _state_snapshot(project_root) if project_root is not None else "state.unavailable"
+    print(
+        "[AgentFlow ERROR] preflight-enforce 执行异常，已阻断本次写入以避免误改。\n"
+        f"原因: {type(err).__name__}: {err}\n"
+        f"状态: {snapshot}\n"
+        "建议:\n"
+        "  1. 先确认 .agent-flow/state/current_phase.md 与 .complexity-level 是否存在\n"
+        "  2. 若缺失，先执行 pre-flight-check 补齐\n"
+        "  3. 如需定位代码问题，运行: python3 .agent-flow/plugins/workflow-guards/hooks/preflight-enforce.py <<< '{}'",
+        file=sys.stderr,
+    )
+
+
 def is_code_file_for_preflight(file_path: str) -> bool:
     """判断文件是否为代码文件（pre-flight 期间需要阻断的文件类型）"""
     _, ext = os.path.splitext(file_path)
@@ -115,6 +142,9 @@ def is_code_file_for_preflight(file_path: str) -> bool:
 
 
 def main():
+    if os.getenv("AGENT_FLOW_PREFLIGHT_DEBUG_RAISE") == "1":
+        raise RuntimeError("debug forced failure")
+
     project_root = find_project_root()
     if project_root is None:
         sys.exit(0)
@@ -219,4 +249,15 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except SystemExit:
+        raise
+    except Exception as exc:  # pragma: no cover - exception branch validated by integration test
+        root = find_project_root()
+        _emit_internal_error(root, exc)
+        # 输出精简 traceback，帮助定位但避免刷屏
+        tb = "".join(traceback.format_exception_only(type(exc), exc)).strip()
+        if tb:
+            print(f"debug: {tb}", file=sys.stderr)
+        sys.exit(2)
