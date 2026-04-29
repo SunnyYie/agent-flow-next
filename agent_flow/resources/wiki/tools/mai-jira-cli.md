@@ -5,7 +5,7 @@ module: jira
 status: active
 confidence: 0.98
 created: 2026-04-27
-last_validated: 2026-04-27
+last_validated: 2026-04-29
 tags: [jira, tool, sso, workflow]
 ---
 
@@ -30,6 +30,21 @@ jira issue transitions MPR-XXXXX
 2. 若 `jira auth status` 已显示 `Authenticated: Active`，禁止再次执行 `jira auth login`。
 3. 仅在会话失效且用户确认后，才允许执行 `jira auth login`（可能触发浏览器登录）。
 4. 如果有 cookie 但状态异常，优先排查本地配置/环境变量，再考虑重新登录。
+
+### 认证过期后重新登录
+
+`jira auth login` 是交互式命令，会提示选择浏览器类型。Agent 必须用管道输入：
+
+```bash
+# Agent 模式（管道输入，避免交互 prompt）
+echo "chrome" | jira auth login
+
+# 检查当前认证状态
+jira auth status
+# 输出: Authenticated: Expired / Active
+```
+
+**Why**: `jira auth login` 使用 Typer prompt 等待用户输入浏览器类型，Agent 不用管道会卡住。
 
 ## 默认规则（团队约定）
 
@@ -79,18 +94,33 @@ jira issue create -p MPR -t 产品需求 -s "标题" \
 jira issue subtask MPR-父单号 -s "[Web] 子任务标题" \
   -a sunyi --rd-owner sunyi --pd-owner sunyi --platform RN
 ```
-5. 流转父单到开发中：
+5. 流转父单到开发中（不能跨步，需逐步流转）：
 ```bash
-jira issue transition MPR-父单号 --id 311
-jira issue transition MPR-父单号 --id 321
-jira issue transition MPR-父单号 --id 261 --field customfield_11154=否
+# 先查看当前可用流转
+jira issue transitions MPR-父单号
+
+# 典型路径：开始 → 排期中 → 开发中
+jira issue transition MPR-父单号 --id 291  # 直接评审通过 → 排期中
+jira issue transition MPR-父单号 --id 261 --field customfield_11154=否  # 完成排期 → 开发中
 ```
-6. 流转子任务到开发中：
+6. 流转子任务到开发中（注意隐藏必填字段）：
 ```bash
 jira issue transition MPR-子任务号 --id 81 \
+  --field customfield_11122=技术方案描述 \
+  --field customfield_11315=无需评审 \
   --field customfield_11121=8 \
-  --field customfield_11315=无需评审
+  --field customfield_10513=2026-04-30
 ```
+
+## 关键踩坑
+
+| 坑 | 现象 | 解决 |
+|---|---|---|
+| `--platform` 是 array 类型 | 值 "PC" 无效 | 用完整选项值（"PC Web"/"RN"/"Server"），先 discover 查允许值 |
+| 用户名必须英文 | "未在系统中找到用户" | `--assignee sunyi` 而非 `--assignee 孙毅` |
+| 子任务前置条件 | "需要创建研发子任务后才可以继续" | 先创建子任务，再流转父单到开发中 |
+| 隐藏必填字段 | "XXX is required in this transition" | 预填所有 "may require" 字段（技术方案、计划上线时间等） |
+| 不能跨步流转 | Transition ID not found | 先 `jira issue transitions` 查可用流转，逐步执行 |
 
 ## 关联信息建议
 

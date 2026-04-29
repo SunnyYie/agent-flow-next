@@ -39,6 +39,7 @@
 - `pitfalls/environment/lark-cli-login-shell-path-mismatch.md`
 - `pitfalls/llm-coding/overcomplication.md`
 - `pitfalls/llm-coding/drive-by-refactoring.md`
+- `pitfalls/tools/jira-workflow-hidden-fields.md`
 
 ## Concepts（核心概念）
 
