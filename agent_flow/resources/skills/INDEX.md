@@ -33,6 +33,8 @@ updated: 2026-04-28
 - `飞书` `lark` `lark-cli` `feishu` `wiki token` `obj_token` `docs +search`:
   - `/Users/sunyi/.agents/skills/lark-shared/SKILL.md`
   - `/Users/sunyi/.agents/skills/lark-doc/SKILL.md`
+- `飞书技术文档` `wiki tech doc` `生成技术文档` `写文档到飞书`:
+  - [feishu-wiki-tech-doc](development/feishu-wiki-tech-doc/SKILL.md)
 - `飞书需求链接` `本地优先检索` `wiki fallback` `websearch fallback`:
   - [knowledge-search](knowledge/knowledge-search/SKILL.md)
   - [pre-flight-check](workflow/pre-flight-check/SKILL.md)
@@ -91,6 +93,7 @@ updated: 2026-04-28
 
 - [code-implementation](development/code-implementation/SKILL.md)
 - [batch-upload-images-to-cdn](development/batch-upload-images-to-cdn/SKILL.md)
+- [feishu-wiki-tech-doc](development/feishu-wiki-tech-doc/SKILL.md) — 从分支代码生成飞书 Wiki 技术文档
 - [tdd-workflow](development/tdd-workflow/SKILL.md)
 - [implementation-patterns](development/implementation-patterns/SKILL.md)
 - [security-checks](development/security-checks/SKILL.md)

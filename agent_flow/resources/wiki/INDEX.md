@@ -26,6 +26,7 @@
 - `patterns/workflow/jira-search-to-dev.md`
 - `patterns/workflow/orchestrator-workers.md`
 - `patterns/workflow/agent-teams.md`
+- `patterns/workflow/feishu-wiki-tech-doc.md`
 - `patterns/architecture/adr-decision-record.md`
 - `patterns/architecture/prompt-caching.md`
 - `patterns/document/requirements-spec-template.md`
