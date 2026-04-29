@@ -9,6 +9,7 @@ v2.0 新增：Simple 任务（快速路径）简化 pre-flight 要求，
 """
 import json
 import os
+import re
 import sys
 
 from contract_utils import (
@@ -58,6 +59,39 @@ def is_readonly_bash(command: str) -> bool:
         if cmd.startswith(prefix):
             return True
     return False
+
+
+def is_safe_state_sync_bash(command: str) -> bool:
+    """Allow syncing AgentFlow state files across repos during pre-flight."""
+    cmd = " ".join(command.strip().split())
+    if not cmd:
+        return False
+    m = re.match(r"^(cp|mv)\s+(\S+)\s+(\S+)$", cmd)
+    if not m:
+        return False
+    src = m.group(2)
+    dst = m.group(3)
+    allowed_names = {
+        "current_phase.md",
+        ".complexity-level",
+        ".simple-preflight-done",
+    }
+    src_name = os.path.basename(src)
+    dst_name = os.path.basename(dst)
+    if src_name != dst_name or src_name not in allowed_names:
+        return False
+    return ".agent-flow/state/" in src and ".agent-flow/state/" in dst
+
+
+def _emit_block(message: str, action: str) -> None:
+    text = (
+        f"[AgentFlow BLOCKED] {message}\n"
+        f"{NO_RETRY_LINE}\n\n"
+        f"✅ 当前可执行操作：\n"
+        f"{action}\n"
+        f"{UNBLOCK_SUFFIX}"
+    )
+    print(text, file=sys.stderr)
 
 
 def is_code_file_for_preflight(file_path: str) -> bool:
@@ -130,20 +164,18 @@ def main():
 
         # 代码文件：判断阻断原因
         if not os.path.isfile(phase_file) or os.path.getsize(phase_file) <= 10:
-            print(
-                f"[AgentFlow BLOCKED] Pre-flight 未完成，禁止修改代码文件: {file_path}\n"
-                f"{NO_RETRY_LINE}\n\n"
-                f"✅ 解除方法：\n"
-                f"  完成 pre-flight-check 步骤，创建 current_phase.md\n"
-                f"  {UNBLOCK_SUFFIX}"
+            _emit_block(
+                f"Pre-flight 未完成，禁止修改代码文件: {file_path}\n"
+                "缺少文件: .agent-flow/state/current_phase.md",
+                "  1. 执行 pre-flight-check\n"
+                "  2. 生成 .agent-flow/state/current_phase.md 后重试",
             )
         else:
-            print(
-                f"[AgentFlow BLOCKED] 任务复杂度未评估，禁止修改代码文件: {file_path}\n"
-                f"{NO_RETRY_LINE}\n\n"
-                f"✅ 解除方法：\n"
-                f"  执行 pre-flight-check Step 2 → 创建 .agent-flow/state/.complexity-level\n"
-                f"  {UNBLOCK_SUFFIX}"
+            _emit_block(
+                f"任务复杂度未评估，禁止修改代码文件: {file_path}\n"
+                "缺少文件: .agent-flow/state/.complexity-level",
+                "  1. 执行 pre-flight-check Step 2\n"
+                "  2. 生成 .agent-flow/state/.complexity-level 后重试",
             )
         sys.exit(2)
 
@@ -152,36 +184,33 @@ def main():
         command = tool_input.get("command", "")
         if is_readonly_bash(command):
             sys.exit(0)  # 允许只读命令
+        if is_safe_state_sync_bash(command):
+            sys.exit(0)  # 允许同步状态文件
         # 允许 mkdir 创建 agent-flow 目录
         if command.strip().startswith("mkdir") and ".agent-flow" in command:
             sys.exit(0)
 
         if not os.path.isfile(phase_file) or os.path.getsize(phase_file) <= 10:
-            print(
-                f"[AgentFlow BLOCKED] Pre-flight 未完成，禁止执行命令: {command[:80]}\n"
-                f"{NO_RETRY_LINE}\n\n"
-                f"✅ 解除方法：\n"
-                f"  完成 pre-flight-check 步骤，创建 current_phase.md\n"
-                f"  {UNBLOCK_SUFFIX}"
+            _emit_block(
+                f"Pre-flight 未完成，禁止执行命令: {command[:120]}\n"
+                "当前阶段仅允许：只读命令、.agent-flow 文档写入、状态文件同步(cp/mv)。",
+                "  1. 执行 pre-flight-check\n"
+                "  2. 生成 .agent-flow/state/current_phase.md 后重试",
             )
         else:
-            print(
-                f"[AgentFlow BLOCKED] 任务复杂度未评估，禁止执行命令: {command[:80]}\n"
-                f"{NO_RETRY_LINE}\n\n"
-                f"✅ 解除方法：\n"
-                f"  执行 pre-flight-check Step 2 → 创建 .agent-flow/state/.complexity-level\n"
-                f"  {UNBLOCK_SUFFIX}"
+            _emit_block(
+                f"任务复杂度未评估，禁止执行命令: {command[:120]}\n"
+                "当前阶段仅允许：只读命令、.agent-flow 文档写入、状态文件同步(cp/mv)。",
+                "  1. 执行 pre-flight-check Step 2\n"
+                "  2. 生成 .agent-flow/state/.complexity-level 后重试",
             )
         sys.exit(2)
 
     # 4. NotebookEdit: 阻断
     if tool_name == "NotebookEdit":
-        print(
-            "[AgentFlow BLOCKED] Pre-flight 未完成，禁止编辑 Notebook。\n"
-            f"{NO_RETRY_LINE}\n\n"
-            "✅ 解除方法：\n"
-            "  完成 pre-flight-check 的 5 个步骤\n"
-            f"  {UNBLOCK_SUFFIX}"
+        _emit_block(
+            "Pre-flight 未完成，禁止编辑 Notebook。",
+            "  完成 pre-flight-check 的 5 个步骤后重试",
         )
         sys.exit(2)
 

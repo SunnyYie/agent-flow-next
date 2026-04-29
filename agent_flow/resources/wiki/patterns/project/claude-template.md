@@ -34,13 +34,19 @@ updated: 2026-04-27
 - 每个子任务前必须检索相关 wiki/skill
 - 关键工具操作（Jira/MR/发布）必须先读对应工具文档
 
-## 5. 产出要求
+## 5. Agent 使用偏好
+- 复杂搜索任务优先使用 Explore 子 Agent
+- 2 个以上独立子任务时并行派发 Agent
+- 代码实现完成后自动触发 code-reviewer
+- 跨模块任务使用 /supervisor 编排
+
+## 6. 产出要求
 - 需求拆解文档：`.agent-flow/state/requirement-decomposition.md`
 - 代码影响地图：`.agent-flow/state/code-impact-map.md`
 - 项目结构映射：`.agent-flow/wiki/project-structure.md`
 - 验收材料：需求映射 + 文件变更 + 测试证据 + 风险说明
 
-## 6. 门控点
+## 7. 门控点
 - G1 初始化就绪
 - G2 需求拆解与代码映射确认
 - G3 测试完成

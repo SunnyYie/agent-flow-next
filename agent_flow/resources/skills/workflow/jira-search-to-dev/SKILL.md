@@ -28,7 +28,7 @@ updated: 2026-04-27
    - `.agent-flow/wiki/jira.md`（若存在）
    - `agent_flow/resources/wiki/tools/mai-jira-cli.md`
    - `agent_flow/resources/wiki/patterns/workflow/jira-search-to-dev.md`
-2. 认证检查：`jira auth status`
+2. 认证检查（Cookie 优先）：先执行 `jira auth status`，若已 `Authenticated: Active`，禁止再执行 `jira auth login`
 3. 搜索历史单：`jira issue search ...`
 4. 判断是否复用；不可复用则新建父单（产品需求）
 5. 创建子任务（platform=RN）
@@ -55,6 +55,7 @@ updated: 2026-04-27
 2. 禁止为“需业务决策字段”填入随意值
 3. 无法确定字段时，先提问确认，再继续流程
 4. `jira-workflow-guard` 会硬阻断：无前置阅读、占位值、未确认的非默认字段
+5. Jira 会话存在时必须复用 cookie/session，只有会话失效且用户确认后才允许登录
 
 ## 变更历史
 

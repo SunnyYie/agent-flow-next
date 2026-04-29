@@ -24,6 +24,13 @@ jira issue transitions MPR-XXXXX
 
 认证要求：`Authenticated: Active` 且 `Session verified`。
 
+## 认证策略（Cookie 优先）
+
+1. 默认先复用本地现有会话（cookie/session），先执行 `jira auth status` 验证。
+2. 若 `jira auth status` 已显示 `Authenticated: Active`，禁止再次执行 `jira auth login`。
+3. 仅在会话失效且用户确认后，才允许执行 `jira auth login`（可能触发浏览器登录）。
+4. 如果有 cookie 但状态异常，优先排查本地配置/环境变量，再考虑重新登录。
+
 ## 默认规则（团队约定）
 
 1. 开发预估工期默认：`8`

@@ -10,6 +10,7 @@ PreToolUse guard for Bash jira commands:
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 import time
@@ -107,8 +108,21 @@ def _block(message: str) -> None:
         "✅ 解除方法：\n"
         "  1. 先读取 Jira 相关 wiki/skill（jira.md / mai-jira-cli.md / jira-search-to-dev）\n"
         "  2. 若使用非默认字段，必须先获得用户确认并写入 .jira-field-decision-confirmed\n"
-        f"  {UNBLOCK_SUFFIX}"
+        f"  {UNBLOCK_SUFFIX}",
+        file=sys.stderr,
     )
+
+
+def _session_cookie_exists() -> bool:
+    candidates = [
+        Path.home() / ".jira" / "cookies.json",
+        Path.home() / ".jira" / "session.json",
+        Path.home() / ".config" / "jira" / "cookies.json",
+    ]
+    env_cookie = os.environ.get("JIRA_COOKIE_FILE", "").strip()
+    if env_cookie:
+        candidates.append(Path(env_cookie).expanduser())
+    return any(path.is_file() and path.stat().st_size > 0 for path in candidates)
 
 
 def main() -> None:
@@ -127,6 +141,10 @@ def main() -> None:
     command = str(payload.get("tool_input", {}).get("command", "")).strip()
     if not command.startswith("jira"):
         sys.exit(0)
+
+    if command.startswith("jira auth login") and _session_cookie_exists():
+        _block("检测到本地已有 Jira cookie/session，请先复用会话：执行 `jira auth status`，确认失效后再登录。")
+        sys.exit(2)
 
     if not _is_jira_mutation(command):
         sys.exit(0)
