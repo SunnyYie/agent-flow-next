@@ -234,7 +234,7 @@ def main() -> None:
     if has_recent_search(marker_file, project_root):
         sys.exit(0)
 
-    print(f"{CHAIN_PROMPT}\n目标: {target_desc}", file=sys.stderr)
+    print(f"{CHAIN_PROMPT}\n目标: {target_desc}")
     sys.exit(2)
 
 

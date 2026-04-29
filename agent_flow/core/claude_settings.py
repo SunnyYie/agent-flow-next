@@ -225,14 +225,42 @@ def sync_plugin_hook_registrations(project_dir: Path, registrations: list[HookRe
 
     settings_path.write_text(json.dumps(settings, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
-    # 3) Migration cleanup: strip plugin-managed hooks from legacy settings.json.
+    # 3) Migration cleanup + backward-compatible mirror for tools/tests still reading settings.json.
     legacy_path = _legacy_plugin_settings_path(project_dir)
-    if legacy_path.exists():
-        legacy_settings = _load_settings(legacy_path)
-        before = _collect_plugin_commands_from_settings(legacy_settings)
-        legacy_settings = _strip_plugin_managed_hooks(legacy_settings)
-        after = _collect_plugin_commands_from_settings(legacy_settings)
-        if before != after:
-            legacy_path.write_text(json.dumps(legacy_settings, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    legacy_settings = _load_settings(legacy_path) if legacy_path.exists() else {}
+    legacy_settings = _strip_plugin_managed_hooks(legacy_settings)
+    legacy_hooks = legacy_settings.setdefault("hooks", {})
+    if not isinstance(legacy_hooks, dict):
+        raise ValueError("invalid Claude settings format: 'hooks' must be an object")
+
+    active_hooks = settings.get("hooks", {})
+    if isinstance(active_hooks, dict):
+        for event_name, event_entries in active_hooks.items():
+            if not isinstance(event_entries, list):
+                continue
+            legacy_event_entries = legacy_hooks.setdefault(event_name, [])
+            if not isinstance(legacy_event_entries, list):
+                raise ValueError(f"invalid Claude settings format: '{event_name}' must be a list")
+            for entry in event_entries:
+                if not isinstance(entry, dict):
+                    continue
+                matcher = entry.get("matcher", "*")
+                if not isinstance(matcher, str):
+                    matcher = "*"
+                target_entry = _find_or_create_matcher_entry(legacy_event_entries, matcher)
+                target_hooks = target_entry["hooks"]
+                for hook in entry.get("hooks", []):
+                    if not isinstance(hook, dict):
+                        continue
+                    if hook.get("type") != "command":
+                        continue
+                    command = hook.get("command", "")
+                    if not isinstance(command, str) or not command.strip():
+                        continue
+                    if _event_has_command(legacy_event_entries, command):
+                        continue
+                    target_hooks.append({"type": "command", "command": command})
+
+    legacy_path.write_text(json.dumps(legacy_settings, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     return settings_path, len(desired)

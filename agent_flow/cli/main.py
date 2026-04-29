@@ -17,6 +17,7 @@ from agent_flow.core.plugin import ensure_default_builtin_plugins
 from agent_flow.core.plugin_loader import load_enabled_plugin_commands
 from agent_flow.core.plugin_selection import select_plugins_interactive
 from agent_flow.core.plugin_registry import PluginScope
+from agent_flow.core.request_context import parse_request_prompt
 
 
 class PluginAwareGroup(click.Group):
@@ -95,6 +96,14 @@ def init_cmd(is_global: bool, is_team: bool, is_project: bool, team_id: str, plu
         project_dir=project,
         selected_plugins=selected_plugins,
     )
+
+
+@cli.command("request-parse")
+@click.option("--prompt", required=True, help="Raw user prompt to structure")
+def request_parse_cmd(prompt: str) -> None:
+    """Parse a natural-language execution prompt into structured request JSON."""
+    context = parse_request_prompt(prompt)
+    click.echo(context.model_dump_json(indent=2))
 
 
 cli.add_command(plugin_group)

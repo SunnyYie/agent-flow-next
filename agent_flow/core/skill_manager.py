@@ -13,7 +13,7 @@ from pathlib import Path
 import yaml
 from pydantic import BaseModel, Field
 
-from agent_flow.core.config import project_primary_skills_dir
+from agent_flow.core.config import bundled_resources_root, project_primary_skills_dir
 
 
 class SkillSpec(BaseModel):
@@ -27,6 +27,7 @@ class SkillSpec(BaseModel):
     abstraction: str = "project"  # project | framework | universal
     created: str = ""
     updated: str = ""
+    path: str = ""
 
 
 class SkillManager:
@@ -38,6 +39,7 @@ class SkillManager:
     """
 
     def __init__(self, project_dir: Path, scope: str = "project") -> None:
+        self.scope = scope
         if scope == "global":
             self.skills_dir = Path.home() / ".agent-flow" / "skills"
         elif scope == "team":
@@ -138,24 +140,20 @@ class SkillManager:
     def list_skills(self, trigger_match: str | None = None) -> list[SkillSpec]:
         """List all skills, optionally filtered by trigger keyword match."""
         specs: list[SkillSpec] = []
-        if not self.skills_dir.is_dir():
-            return specs
+        seen_names: set[str] = set()
 
-        for skill_dir in sorted(self.skills_dir.iterdir()):
-            if not skill_dir.is_dir():
-                continue
-            handler = skill_dir / "handler.md"
-            if not handler.is_file():
-                continue
-
+        for handler in self._iter_skill_files():
             spec = _parse_frontmatter_to_spec(handler)
             if spec is None:
                 continue
+            spec.path = str(handler)
 
-            if trigger_match is not None:
-                if trigger_match.lower() not in spec.trigger.lower():
-                    continue
+            if spec.name in seen_names:
+                continue
+            if trigger_match is not None and trigger_match.lower() not in spec.trigger.lower():
+                continue
 
+            seen_names.add(spec.name)
             specs.append(spec)
 
         return specs
@@ -166,7 +164,7 @@ class SkillManager:
         Returns dict with keys: spec (SkillSpec), procedure (str), rules (str).
         Raises FileNotFoundError if the skill doesn't exist.
         """
-        handler_path = self.skills_dir / name / "handler.md"
+        handler_path = self._resolve_skill_file(name)
         if not handler_path.is_file():
             raise FileNotFoundError(f"Skill '{name}' not found at {handler_path}")
 
@@ -174,9 +172,37 @@ class SkillManager:
         spec = _parse_frontmatter_to_spec(handler_path)
         if spec is None:
             spec = SkillSpec(name=name)
+        spec.path = str(handler_path)
 
         procedure, rules = _parse_body_sections(content)
         return {"spec": spec, "procedure": procedure, "rules": rules}
+
+    def _iter_skill_files(self) -> list[Path]:
+        files: list[Path] = []
+
+        if self.skills_dir.is_dir():
+            files.extend(sorted(self.skills_dir.rglob("handler.md"), key=lambda item: str(item).lower()))
+
+        if self.scope == "global":
+            bundled_dir = bundled_resources_root() / "skills"
+            if bundled_dir.is_dir():
+                files.extend(sorted(bundled_dir.rglob("SKILL.md"), key=lambda item: str(item).lower()))
+
+        return files
+
+    def _resolve_skill_file(self, name: str) -> Path:
+        primary = self.skills_dir / name / "handler.md"
+        if primary.is_file():
+            return primary
+
+        for path in self._iter_skill_files():
+            spec = _parse_frontmatter_to_spec(path)
+            if spec and spec.name == name:
+                return path
+            if path.parent.name == name:
+                return path
+
+        return primary
 
     # -- Auto-creation -------------------------------------------------------
 

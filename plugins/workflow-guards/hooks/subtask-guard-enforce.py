@@ -162,7 +162,7 @@ def main() -> None:
     if has_valid_guard(project_root):
         sys.exit(0)
 
-    print(f"{GUARD_PROMPT}\n目标文件: {file_path}", file=sys.stderr)
+    print(f"{GUARD_PROMPT}\n目标文件: {file_path}")
     sys.exit(2)
 
 

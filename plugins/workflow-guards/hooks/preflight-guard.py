@@ -83,6 +83,16 @@ def main():
         config_path = ".agent-flow/config.yaml"
         if not os.path.isfile(config_path) or os.path.getsize(config_path) < 10:
             incomplete_issues.append("config.yaml 缺失或为空")
+        required_seed_files = [
+            ".agent-flow/wiki/project-structure.md",
+            ".agent-flow/state/requirements-initial.md",
+            ".agent-flow/state/task-list.md",
+            ".agent-flow/state/agent-team-config.yaml",
+            ".agent-flow/state/phase-review.md",
+        ]
+        for path in required_seed_files:
+            if not os.path.isfile(path) or os.path.getsize(path) == 0:
+                incomplete_issues.append(f"{path} 缺失或为空")
 
     # Output incomplete initialization warning
     incomplete_warning = ""
@@ -126,6 +136,10 @@ def main():
         if not os.path.isfile(design_marker):
             design_warning = "\n\n[AgentFlow WARNING] 设计决策确认(.design-confirmed)未完成！\n请先执行 requirement-decomposition Phase 5.5 设计决策检查点，确认修改方式、影响范围、实施策略和回滚方案。"
 
+        task_list_warning = ""
+        if not os.path.isfile(".agent-flow/state/task-list.md"):
+            task_list_warning = "\n\n[AgentFlow WARNING] 开发任务清单(.agent-flow/state/task-list.md)未生成！\n请先生成明确任务列表，并给出每个任务的目标文件/模块、依赖和验收方式。"
+
         # 检查用户验收标记（v3.0 新增）
         acceptance_marker = ".agent-flow/state/.user-acceptance-done"
         acceptance_warning = ""
@@ -134,7 +148,7 @@ def main():
 
         # 注入开发铁律提醒
         print(
-            f"[AgentFlow] Pre-flight 已完成。{DEV_IRON_LAWS}\n每个子任务前执行 subtask-guard 搜索知识库。{sq_warning}{complexity_warning}{clarified_warning}{design_warning}{acceptance_warning}{incomplete_warning}"
+            f"[AgentFlow] Pre-flight 已完成。{DEV_IRON_LAWS}\n每个子任务前执行 subtask-guard 搜索知识库。{sq_warning}{complexity_warning}{clarified_warning}{design_warning}{task_list_warning}{acceptance_warning}{incomplete_warning}"
         )
         sys.exit(0)
 

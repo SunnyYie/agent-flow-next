@@ -116,12 +116,82 @@ def _block_message(state: dict, target: str) -> str:
     return "\n".join(lines)
 
 
+def _request_context_path(repo_root: Path, state: dict) -> Path:
+    path = str(state.get("request_context", "")).strip()
+    if path:
+        return Path(path)
+    return repo_root / ".agent-flow" / "state" / "request-context.json"
+
+
+def _load_request_context(repo_root: Path, state: dict) -> dict:
+    path = _request_context_path(repo_root, state)
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _task_list_ready(repo_root: Path) -> bool:
+    task_list = repo_root / ".agent-flow" / "state" / "task-list.md"
+    if not task_list.is_file():
+        return False
+    try:
+        content = task_list.read_text(encoding="utf-8")
+    except OSError:
+        return False
+    return len(content.strip()) > 0
+
+
+def _post_ready_blockers(repo_root: Path, state: dict, target: str) -> str | None:
+    if state.get("claude_md_exists") and not state.get("claude_project_rules_ready", True):
+        return (
+            "[AgentFlow BLOCKED] 当前项目的 CLAUDE.md 缺少项目结构/任务清单/Agent 分工等开发规范，"
+            "禁止直接进入开发。\n"
+            f"{NO_RETRY_LINE}\n\n"
+            "✅ 解除方法：\n"
+            "  1. 补充 CLAUDE.md 中的项目结构、任务清单、Agent 分工规范\n"
+            "  2. 重新阅读 CLAUDE.md\n"
+            f"  {UNBLOCK_SUFFIX}\n"
+            f"目标: {target}"
+        )
+
+    if not _task_list_ready(repo_root):
+        return (
+            "[AgentFlow BLOCKED] 需求任务清单未完成，禁止继续执行可变更操作。\n"
+            f"{NO_RETRY_LINE}\n\n"
+            "✅ 解除方法：\n"
+            "  1. 完善 `.agent-flow/state/task-list.md`\n"
+            "  2. 为每个任务补充功能点、目标文件/模块、依赖、验收方式\n"
+            f"  {UNBLOCK_SUFFIX}\n"
+            f"目标: {target}"
+        )
+
+    request_context = _load_request_context(repo_root, state)
+    if request_context.get("ui_constraints_required"):
+        ui_marker = repo_root / ".agent-flow" / "state" / ".ui-design-guided"
+        if not ui_marker.is_file():
+            return (
+                "[AgentFlow BLOCKED] 当前请求包含 UI 文件，必须先按 UI 规范完成设计约束确认。\n"
+                f"{NO_RETRY_LINE}\n\n"
+                "✅ 解除方法：\n"
+                "  1. 严格阅读并对齐 UI file 的设计规范\n"
+                "  2. 使用 frontend-design 插件与 ui-ux-pro-max skill 完成设计约束确认\n"
+                "  3. 写入 `.agent-flow/state/.ui-design-guided`\n"
+                f"  {UNBLOCK_SUFFIX}\n"
+                f"目标: {target}"
+            )
+    return None
+
+
 def main() -> None:
     repo_root = _find_repo_root()
     if repo_root is None:
         sys.exit(0)
     state = _load_state(repo_root / STATE_FILE)
-    if not state or state.get("status") == "ready":
+    if not state:
         sys.exit(0)
 
     try:
@@ -135,6 +205,12 @@ def main() -> None:
     if tool_name in {"Write", "Edit", "MultiEdit"}:
         file_path = str(tool_input.get("file_path", ""))
         if file_path and _is_code_file(file_path):
+            if state.get("status") == "ready":
+                blocker = _post_ready_blockers(repo_root, state, file_path)
+                if blocker:
+                    print(blocker, file=sys.stderr)
+                    sys.exit(2)
+                sys.exit(0)
             print(_block_message(state, file_path), file=sys.stderr)
             sys.exit(2)
         sys.exit(0)
@@ -144,6 +220,12 @@ def main() -> None:
         if is_readonly_bash(command):
             sys.exit(0)
         if command.startswith("agent-flow init"):
+            sys.exit(0)
+        if state.get("status") == "ready":
+            blocker = _post_ready_blockers(repo_root, state, command[:120])
+            if blocker:
+                print(blocker, file=sys.stderr)
+                sys.exit(2)
             sys.exit(0)
         print(_block_message(state, command[:120]), file=sys.stderr)
         sys.exit(2)

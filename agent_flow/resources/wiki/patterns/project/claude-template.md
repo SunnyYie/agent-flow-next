@@ -31,19 +31,25 @@ updated: 2026-04-27
 ## 4. 开发约束
 - 禁止在 `main/master/develop` 直接改代码
 - 禁止无计划直接实现
+- 禁止自行发明项目目录/路由/入口文件；编码前必须先读取 `.agent-flow/wiki/project-structure.md`
 - 每个子任务前必须检索相关 wiki/skill
 - 关键工具操作（Jira/MR/发布）必须先读对应工具文档
+- 若输入中包含 UI file / 设计稿 / HTML 示例，必须严格按 UI 文件实现，并先完成 `frontend-design` + `ui-ux-pro-max` 约束确认
 
 ## 5. Agent 使用偏好
 - 复杂搜索任务优先使用 Explore 子 Agent
 - 2 个以上独立子任务时并行派发 Agent
 - 代码实现完成后自动触发 code-reviewer
 - 跨模块任务使用 /supervisor 编排
+- 需求拆解完成后，必须先生成 `.agent-flow/state/task-list.md`，再派发 Coder Agent 开发
+- Supervisor Agent 在 G2（需求确认后）和 G4（交付前）必须介入，负责 Jira/分支/PR/交付治理
 
 ## 6. 产出要求
 - 需求拆解文档：`.agent-flow/state/requirement-decomposition.md`
+- 任务清单：`.agent-flow/state/task-list.md`
 - 代码影响地图：`.agent-flow/state/code-impact-map.md`
 - 项目结构映射：`.agent-flow/wiki/project-structure.md`
+- 阶段复盘：`.agent-flow/state/phase-review.md`
 - 验收材料：需求映射 + 文件变更 + 测试证据 + 风险说明
 
 ## 7. 门控点

@@ -52,6 +52,8 @@ updated: 2026-04-28
   - [jira-search-to-dev](workflow/jira-search-to-dev/SKILL.md)
 - `plugin` `插件` `hook注册` `settings.local.json` `plugin verify`:
   - `agent_flow/resources/wiki/tools/claude-code-plugin-hooks.md`
+- `cdn` `上传图片` `批量上传图片` `assets/icons`:
+  - [batch-upload-images-to-cdn](development/batch-upload-images-to-cdn/SKILL.md)
 - `agent-flow初始化` `项目初始化` `agent-flow init` `.agent-flow`:
   - `agent_flow/resources/wiki/tools/project-init-agent-flow.md`
 - `CLAUDE.md模板` `AGENTS.md模板` `项目协议模板`:
@@ -88,6 +90,7 @@ updated: 2026-04-28
 ## Development（代码开发与质量）
 
 - [code-implementation](development/code-implementation/SKILL.md)
+- [batch-upload-images-to-cdn](development/batch-upload-images-to-cdn/SKILL.md)
 - [tdd-workflow](development/tdd-workflow/SKILL.md)
 - [implementation-patterns](development/implementation-patterns/SKILL.md)
 - [security-checks](development/security-checks/SKILL.md)

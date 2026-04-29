@@ -18,6 +18,7 @@
 - `Jira 工具`：`tools/mai-jira-cli.md`
 - `插件 Hook 接入`：`tools/claude-code-plugin-hooks.md`
 - `项目初始化`：`tools/project-init-agent-flow.md`
+- `CDN 批量上传`：`tools/cdn-batch-upload.md`
 
 ## Patterns（成功模式）
 
@@ -54,3 +55,4 @@
 - `tools/claude-code-plugin-hooks.md`
 - `tools/project-init-agent-flow.md`
 - `tools/mai-jira-cli.md`
+- `tools/cdn-batch-upload.md`

@@ -506,7 +506,7 @@ def _find_recommended_skills(
     for scope in ("project", "global"):
         manager = SkillManager(project_dir, scope=scope)
         for spec in manager.list_skills():
-            skill_path = manager.skills_dir / spec.name / "handler.md"
+            skill_path = Path(spec.path) if spec.path else manager.skills_dir / spec.name / "handler.md"
             score = _score_skill_match(
                 skill_path,
                 skill_name=spec.name,

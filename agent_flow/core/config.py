@@ -8,6 +8,7 @@ from pathlib import Path
 
 import yaml
 
+from agent_flow.core.request_context import ensure_request_scaffolds
 from agent_flow.core.types import GlobalConfig, ProjectConfig, TeamConfig
 
 GLOBAL_ASSET_DIRS = [
@@ -988,6 +989,7 @@ def init_project(project_dir: Path) -> Path:
     _write_project_index_docs(root, global_root=global_root, team_root=team_root)
     _write_project_readme(root, cfg.name)
     _write_project_protocol_docs(project_dir=Path(project_dir), project_name=cfg.name, global_root=global_root)
+    ensure_request_scaffolds(Path(project_dir), cfg.name)
     return root
 
 

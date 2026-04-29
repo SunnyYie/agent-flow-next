@@ -164,6 +164,100 @@ def has_implementation_plan(project_root) -> tuple[bool, bool]:
     return False, False
 
 
+def task_list_ready(project_root) -> bool:
+    task_list = read_state_path(project_root, "task-list.md")
+    if not os.path.isfile(task_list):
+        return False
+    try:
+        return len(Path(task_list).read_text(encoding="utf-8").strip()) > 0
+    except OSError:
+        return False
+
+
+def _suggest_agent_for_task_type(task_type: str) -> str:
+    t = task_type.strip().lower()
+    if any(k in t for k in ("ui", "h5", "page", "frontend", "view", "style")):
+        return "coder-agent"
+    if any(k in t for k in ("api", "integration", "联调", "backend", "service")):
+        return "supervisor-agent"
+    if any(k in t for k in ("test", "qa", "verify", "验收", "回归")):
+        return "verifier-agent"
+    if any(k in t for k in ("jira", "branch", "pr", "release", "发布")):
+        return "supervisor-agent"
+    return "coder-agent"
+
+
+def _format_routing_suggestions(type_to_agents: dict[str, set[str]]) -> str:
+    lines = []
+    for task_type in sorted(type_to_agents.keys()):
+        lines.append(f"  - {task_type} -> {_suggest_agent_for_task_type(task_type)}")
+    return "\n".join(lines)
+
+
+def validate_task_agent_routing(project_root) -> tuple[bool, str]:
+    task_list = read_state_path(project_root, "task-list.md")
+    if not os.path.isfile(task_list):
+        return False, "task-list.md 缺失"
+    try:
+        content = Path(task_list).read_text(encoding="utf-8")
+    except OSError:
+        return False, "task-list.md 无法读取"
+
+    lines = [line.strip() for line in content.splitlines() if line.strip()]
+    header_line = ""
+    for line in lines:
+        if line.startswith("|") and "任务类型" in line and "执行Agent" in line:
+            header_line = line
+            break
+    if not header_line:
+        # Backward compatible: old format won't block.
+        return True, ""
+
+    columns = [col.strip() for col in header_line.strip("|").split("|")]
+    try:
+        type_idx = columns.index("任务类型")
+        agent_idx = columns.index("执行Agent")
+    except ValueError:
+        return True, ""
+
+    type_to_agents: dict[str, set[str]] = {}
+    for line in lines:
+        if not line.startswith("|"):
+            continue
+        cells = [cell.strip() for cell in line.strip("|").split("|")]
+        if len(cells) <= max(type_idx, agent_idx):
+            continue
+        task_type = cells[type_idx].strip().lower()
+        agent = cells[agent_idx].strip().lower()
+        if not task_type or task_type in {"任务类型", "---", "待补充"}:
+            continue
+        if not agent or agent in {"执行agent", "---", "待补充"}:
+            continue
+        type_to_agents.setdefault(task_type, set()).add(agent)
+
+    if len(type_to_agents) < 2:
+        return True, ""
+
+    all_agents: set[str] = set()
+    for agents in type_to_agents.values():
+        all_agents.update(agents)
+    if len(all_agents) < 2:
+        suggestions = _format_routing_suggestions(type_to_agents)
+        return False, f"检测到多个任务类型，但都分配给同一 Agent。\n建议分配：\n{suggestions}"
+    return True, ""
+
+
+def request_has_ui_input(project_root) -> bool:
+    path = read_state_path(project_root, "request-context.json")
+    if not os.path.isfile(path):
+        return False
+    try:
+        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    except Exception:
+        return False
+    return bool(payload.get("ui_constraints_required"))
+
+
 # ============================================================
 # 主逻辑
 # ============================================================
@@ -231,6 +325,47 @@ def main():
                 "[AgentFlow REMINDER] 当前计划文档为 legacy 格式，已兼容放行。\n"
                 "建议迁移到 canonical 章节：# 任务 / ## 复杂度 / ## RPI 阶段规划 / ## 实施计划 / ## 变更点 / ## 验收标准"
             )
+
+        if not task_list_ready(project_root):
+            print(
+                f"[AgentFlow BLOCKED] `.agent-flow/state/task-list.md` 不存在或为空，禁止修改代码文件！\n"
+                f"{NO_RETRY_LINE}\n\n"
+                f"✅ 解除方法：\n"
+                f"  1. 先生成 `.agent-flow/state/task-list.md`\n"
+                f"  2. 为每个任务补充功能点、目标文件/模块、依赖、验收方式\n"
+                f"  {UNBLOCK_SUFFIX}\n"
+                f"目标文件: {file_path}"
+            )
+            sys.exit(2)
+
+        routing_ok, routing_msg = validate_task_agent_routing(project_root)
+        if not routing_ok:
+            print(
+                f"[AgentFlow BLOCKED] 任务类型与 Agent 路由不满足多 Agent 协作要求：{routing_msg}\n"
+                f"{NO_RETRY_LINE}\n\n"
+                f"✅ 解除方法：\n"
+                f"  1. 在 `.agent-flow/state/task-list.md` 为每个任务填写 `任务类型` 与 `执行Agent`\n"
+                f"  2. 当存在多个任务类型时，至少分配给 2 个不同 subagent\n"
+                f"  3. 示例：ui→coder-agent，api/test→verifier-agent/supervisor-agent\n"
+                f"  {UNBLOCK_SUFFIX}\n"
+                f"目标文件: {file_path}"
+            )
+            sys.exit(2)
+
+        if request_has_ui_input(project_root):
+            ui_marker = read_state_path(project_root, ".ui-design-guided")
+            if not os.path.isfile(ui_marker):
+                print(
+                    f"[AgentFlow BLOCKED] 当前请求包含 UI 文件，但尚未完成 UI 约束确认，禁止修改代码文件！\n"
+                    f"{NO_RETRY_LINE}\n\n"
+                    f"✅ 解除方法：\n"
+                    f"  1. 严格按照 UI file 对齐视觉与交互规范\n"
+                    f"  2. 使用 frontend-design 插件与 ui-ux-pro-max skill 进行开发\n"
+                    f"  3. 创建 `.agent-flow/state/.ui-design-guided`\n"
+                    f"  {UNBLOCK_SUFFIX}\n"
+                    f"目标文件: {file_path}"
+                )
+                sys.exit(2)
 
         # 检查 3: 需求澄清标记（v3.0 新增，软提醒）
         requirement_marker = read_state_path(project_root, ".requirement-clarified")

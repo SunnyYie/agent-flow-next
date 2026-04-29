@@ -15,6 +15,13 @@ import subprocess
 import sys
 from pathlib import Path
 
+for candidate in (Path(__file__).resolve().parents[3], Path(__file__).resolve().parents[4]):
+    if (candidate / "agent_flow").is_dir():
+        sys.path.insert(0, str(candidate))
+        break
+
+from agent_flow.core.request_context import ensure_request_scaffolds, parse_request_prompt, write_request_context
+
 STATE_FILE = ".claude/.requirement-entry-state.json"
 REQUIREMENT_HINTS = (
     "需求文档",
@@ -130,6 +137,8 @@ def _write_state(
     fewshots_file: Path | None,
     has_agent_flow: bool,
     init_status: str,
+    request_context_path: Path,
+    claude_project_rules_ready: bool,
 ) -> Path:
     state_path = repo_root / STATE_FILE
     state_path.parent.mkdir(parents=True, exist_ok=True)
@@ -146,11 +155,30 @@ def _write_state(
         "agent_flow_ready": has_agent_flow,
         "init_status": init_status.strip(),
         "allow_design_assets": any(hint in prompt.lower() for hint in DESIGN_HINTS),
+        "request_context": str(request_context_path),
+        "claude_project_rules_ready": claude_project_rules_ready,
     }
+    try:
+        request_context = json.loads(request_context_path.read_text(encoding="utf-8"))
+    except Exception:
+        request_context = {}
+    payload["has_ui_input"] = bool(request_context.get("has_ui_input"))
+    payload["project"] = str(request_context.get("project", ""))
     state_path.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
     return state_path
+
+
+def _claude_has_project_rules(claude_md: Path) -> bool:
+    if not claude_md.is_file():
+        return False
+    try:
+        content = claude_md.read_text(encoding="utf-8").lower()
+    except OSError:
+        return False
+    required_keywords = ("project-structure", "项目结构", "任务清单", "agent")
+    return all(keyword in content for keyword in required_keywords)
 
 
 def main() -> None:
@@ -177,8 +205,19 @@ def main() -> None:
                 "\n[AgentFlow WARNING] 当前项目未初始化，尝试自动执行 `agent-flow init --project` 失败："
                 f"\n{detail}"
             )
+    request_context = parse_request_prompt(prompt)
+    ensure_request_scaffolds(repo_root, request_context.project or repo_root.name, request_context)
+    request_context_path = write_request_context(repo_root, request_context)
+    claude_project_rules_ready = _claude_has_project_rules(claude_md)
     state_path = _write_state(
-        repo_root, prompt, claude_md, fewshots_file, has_agent_flow, init_status
+        repo_root,
+        prompt,
+        claude_md,
+        fewshots_file,
+        has_agent_flow,
+        init_status,
+        request_context_path,
+        claude_project_rules_ready,
     )
 
     read_lines = []
@@ -205,17 +244,26 @@ def main() -> None:
     if not has_agent_flow:
         workflow_line = "3. 当前项目尚未形成可用的 agent-flow 工作流，需先完成初始化问题后再继续任务"
 
+    claude_rule_line = ""
+    if not claude_project_rules_ready:
+        claude_rule_line = (
+            "\n[AgentFlow WARNING] 当前项目的 CLAUDE.md 缺少项目结构/任务清单/Agent 分工等开发规范，"
+            "需要先补充后再进入开发。"
+        )
+
     print(
         "<system-reminder>\n"
         "[AgentFlow REQUIREMENT ENTRY] 检测到“阅读需求文档并执行任务”类输入，已启用强制流程。\n"
         f"项目目录: {repo_root}\n"
         f"{init_status}\n\n"
         f"状态文件: {state_path}\n\n"
+        f"结构化请求: {request_context_path}\n"
+        f"{claude_rule_line}\n\n"
         "接下来必须按顺序执行：\n"
         f"{read_lines[0]}\n"
         f"{read_lines[1]}\n"
         f"{workflow_line}\n"
-        "4. 完成文档阅读后，再开始 pre-flight、需求拆解、实现与验证\n"
+        "4. 完成文档阅读后，先补齐 requirements-initial / task-list / project-structure，再开始 pre-flight、需求拆解、实现与验证\n"
         "</system-reminder>"
     )
 
