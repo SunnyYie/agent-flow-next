@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+import subprocess
 from typing import Any
 
 
@@ -67,12 +68,39 @@ class StatePaths:
 
 
 def find_project_root(start: Path | str | None = None) -> Path | None:
-    """Find the nearest project root containing .agent-flow."""
+    """Find project root containing .agent-flow, preferring git-repo root."""
     current = Path(start or ".").resolve()
-    for candidate in [current, *current.parents]:
-        if (candidate / ".agent-flow").exists():
-            return candidate
-    return None
+    candidates = [candidate for candidate in [current, *current.parents] if (candidate / ".agent-flow").exists()]
+    if not candidates:
+        return None
+
+    git_root: Path | None = None
+    try:
+        proc = subprocess.run(
+            ["git", "-C", str(current), "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if proc.returncode == 0 and proc.stdout.strip():
+            git_root = Path(proc.stdout.strip()).resolve()
+    except OSError:
+        git_root = None
+
+    if git_root is None:
+        for candidate in [current, *current.parents]:
+            if (candidate / ".git").exists():
+                git_root = candidate
+                break
+
+    if git_root is not None:
+        if (git_root / ".agent-flow").exists():
+            return git_root
+        in_repo = [c for c in candidates if git_root == c or git_root in c.parents]
+        if in_repo:
+            return in_repo[-1]
+
+    return candidates[0]
 
 
 def get_state_paths(project_root: Path | str) -> StatePaths:

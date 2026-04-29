@@ -7,6 +7,7 @@ import json
 import os
 import shlex
 import shutil
+import subprocess
 import time
 from fnmatch import fnmatch
 from pathlib import Path
@@ -40,10 +41,38 @@ LEGACY_PLAN_MARKERS = [
 
 def find_project_root(start: str | None = None) -> Path | None:
     current = Path(start or os.getcwd()).resolve()
-    for candidate in [current, *current.parents]:
-        if (candidate / ".agent-flow").exists():
-            return candidate
-    return None
+    candidates = [candidate for candidate in [current, *current.parents] if (candidate / ".agent-flow").exists()]
+    if not candidates:
+        return None
+
+    git_root: Path | None = None
+    try:
+        proc = subprocess.run(
+            ["git", "-C", str(current), "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if proc.returncode == 0 and proc.stdout.strip():
+            git_root = Path(proc.stdout.strip()).resolve()
+    except OSError:
+        git_root = None
+
+    if git_root is None:
+        for candidate in [current, *current.parents]:
+            if (candidate / ".git").exists():
+                git_root = candidate
+                break
+
+    if git_root is not None:
+        root_agent_flow = git_root / ".agent-flow"
+        if root_agent_flow.exists():
+            return git_root
+        in_repo = [c for c in candidates if git_root == c or git_root in c.parents]
+        if in_repo:
+            return in_repo[-1]
+
+    return candidates[0]
 
 
 def get_state_dir(project_root: Path) -> Path:
