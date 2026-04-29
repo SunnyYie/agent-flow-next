@@ -14,14 +14,20 @@ from pathlib import Path
 
 
 def _find_project_root() -> Path | None:
-    """Walk up from cwd to find a directory with .agent-flow/."""
-    cwd = Path.cwd()
-    for parent in [cwd, *cwd.parents]:
-        if (parent / ".agent-flow").exists():
-            return parent
-        if parent == Path.home():
-            break
-    return None
+    """Find project root containing .agent-flow, preferring git-repo root."""
+    cwd = Path.cwd().resolve()
+    candidates = [candidate for candidate in [cwd, *cwd.parents] if (candidate / ".agent-flow").exists()]
+    if not candidates:
+        return None
+    git_root = _is_git_repo()
+    if git_root is not None:
+        git_root = git_root.resolve()
+        if (git_root / ".agent-flow").exists():
+            return git_root
+        in_repo = [c for c in candidates if git_root == c or git_root in c.parents]
+        if in_repo:
+            return in_repo[-1]
+    return candidates[0]
 
 
 def _is_git_repo() -> Path | None:

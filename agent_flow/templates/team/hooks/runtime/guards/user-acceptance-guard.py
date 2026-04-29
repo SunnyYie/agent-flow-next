@@ -14,18 +14,40 @@ Output: <system-reminder> block with acceptance reminder.
 from __future__ import annotations
 
 import os
+import subprocess
 import sys
 from pathlib import Path
 
 
 def _find_project_root() -> Path | None:
-    cwd = Path.cwd()
-    for parent in [cwd, *cwd.parents]:
-        if (parent / ".agent-flow").exists():
-            return parent
-        if parent == Path.home():
-            break
-    return None
+    cwd = Path.cwd().resolve()
+    candidates = [candidate for candidate in [cwd, *cwd.parents] if (candidate / ".agent-flow").exists()]
+    if not candidates:
+        return None
+    git_root: Path | None = None
+    try:
+        proc = subprocess.run(
+            ["git", "-C", str(cwd), "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if proc.returncode == 0 and proc.stdout.strip():
+            git_root = Path(proc.stdout.strip()).resolve()
+    except OSError:
+        git_root = None
+    if git_root is None:
+        for candidate in [cwd, *cwd.parents]:
+            if (candidate / ".git").exists():
+                git_root = candidate
+                break
+    if git_root is not None:
+        if (git_root / ".agent-flow").exists():
+            return git_root
+        in_repo = [c for c in candidates if git_root == c or git_root in c.parents]
+        if in_repo:
+            return in_repo[-1]
+    return candidates[0]
 
 
 def _read_current_phase(project_root: Path) -> str:

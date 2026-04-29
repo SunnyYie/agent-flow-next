@@ -12,18 +12,13 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+from contract_utils import find_project_root as _shared_find_project_root
 
 MARKER_FILE = ".agent-flow/state/.self-questioning-done"
 
 
 def _find_project_root() -> Path | None:
-    cwd = Path.cwd()
-    for parent in [cwd, *cwd.parents]:
-        if (parent / ".agent-flow").exists():
-            return parent
-        if parent == Path.home():
-            break
-    return None
+    return _shared_find_project_root()
 
 
 def _read_current_phase(project_root: Path) -> str:
