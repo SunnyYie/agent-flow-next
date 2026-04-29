@@ -17,7 +17,10 @@ from contract_utils import (
     UNBLOCK_SUFFIX,
     find_project_root,
     get_complexity_level,
+    has_shared_search_session,
+    is_simple_string_replacement,
     read_state_path,
+    touch_shared_search_session,
 )
 
 MAX_AGE_MAP = {
@@ -155,11 +158,22 @@ def main() -> None:
 
     if input_data.get("tool_name", "") not in ("Write", "Edit"):
         sys.exit(0)
-    file_path = input_data.get("tool_input", {}).get("file_path", "")
+    tool_name = input_data.get("tool_name", "")
+    tool_input = input_data.get("tool_input", {})
+    file_path = tool_input.get("file_path", "")
     if not file_path or not is_code_file(file_path):
         sys.exit(0)
 
+    if is_simple_string_replacement(project_root, tool_name, tool_input):
+        sys.exit(0)
+
     if has_valid_guard(project_root):
+        touch_shared_search_session(project_root, "code_edit")
+        sys.exit(0)
+
+    complexity = get_complexity_level(project_root)
+    if has_shared_search_session(project_root, "code_edit", complexity):
+        touch_shared_search_session(project_root, "code_edit")
         sys.exit(0)
 
     print(f"{GUARD_PROMPT}\n目标文件: {file_path}")

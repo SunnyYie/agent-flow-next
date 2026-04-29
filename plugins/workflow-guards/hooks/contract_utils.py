@@ -7,7 +7,15 @@ import json
 import os
 import shlex
 import shutil
+import time
+from fnmatch import fnmatch
 from pathlib import Path
+from urllib.parse import urlparse
+
+try:
+    import yaml
+except Exception:  # pragma: no cover
+    yaml = None
 
 CANONICAL_PLAN_HEADERS = [
     "# 任务:",
@@ -148,6 +156,22 @@ READONLY_BASH_PREFIXES = (
     "git diff", "git branch", "git remote", "git rev-parse", "git show",
 )
 
+DEFAULT_SIMPLE_REPLACE_CONFIG = {
+    "enabled": True,
+    "max_chars": 300,
+    "max_lines": 2,
+    "file_globs": ["**/*"],
+    "keywords": ["cdn", "static", "asset", "image-host", "bucket"],
+}
+
+DEFAULT_SHARED_SEARCH_SESSION_CONFIG = {
+    "enabled": True,
+    "ttl_seconds": {
+        "medium": 7200,
+        "complex": 5400,
+    },
+}
+
 
 def is_code_file(file_path: str) -> bool:
     for prefix in ALLOWED_PATH_PREFIXES:
@@ -232,3 +256,175 @@ def agent_flow_hook_registration_status(project_root: Path) -> tuple[bool, list[
 def is_cli_available(cli_name: str) -> bool:
     """Check whether a CLI tool is on the current PATH."""
     return shutil.which(cli_name) is not None
+
+
+def load_agent_flow_config(project_root: Path) -> dict:
+    config_file = project_root / ".agent-flow" / "config.yaml"
+    if not config_file.is_file():
+        return {}
+    try:
+        content = config_file.read_text(encoding="utf-8")
+    except OSError:
+        return {}
+    if not content.strip():
+        return {}
+    if yaml is not None:
+        try:
+            data = yaml.safe_load(content) or {}
+            return data if isinstance(data, dict) else {}
+        except Exception:
+            return {}
+    return {}
+
+
+def get_workflow_guard_config(project_root: Path) -> dict:
+    config = load_agent_flow_config(project_root)
+    guards = config.get("workflow_guards", {})
+    return guards if isinstance(guards, dict) else {}
+
+
+def get_simple_replace_config(project_root: Path) -> dict:
+    user_cfg = get_workflow_guard_config(project_root).get("simple_replace_whitelist", {})
+    if not isinstance(user_cfg, dict):
+        user_cfg = {}
+    merged = dict(DEFAULT_SIMPLE_REPLACE_CONFIG)
+    merged.update(user_cfg)
+    return merged
+
+
+def _looks_like_url(value: str) -> bool:
+    v = value.strip().strip("\"'`()")
+    parsed = urlparse(v)
+    return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
+
+
+def _url_host_swap_only(old_s: str, new_s: str) -> bool:
+    old_v = old_s.strip().strip("\"'`()")
+    new_v = new_s.strip().strip("\"'`()")
+    if not (_looks_like_url(old_v) and _looks_like_url(new_v)):
+        return False
+    old_u = urlparse(old_v)
+    new_u = urlparse(new_v)
+    return (
+        old_u.path == new_u.path
+        and old_u.params == new_u.params
+        and old_u.query == new_u.query
+        and old_u.fragment == new_u.fragment
+    )
+
+
+def is_simple_string_replacement(project_root: Path, tool_name: str, tool_input: dict) -> bool:
+    if tool_name != "Edit":
+        return False
+    cfg = get_simple_replace_config(project_root)
+    if not cfg.get("enabled", True):
+        return False
+
+    file_path = str(tool_input.get("file_path", "") or "")
+    old_s = str(tool_input.get("old_string", "") or "")
+    new_s = str(tool_input.get("new_string", "") or "")
+    if not file_path or not old_s or not new_s or old_s == new_s:
+        return False
+
+    file_globs = cfg.get("file_globs", ["**/*"])
+    if isinstance(file_globs, list) and file_globs:
+        if not any(fnmatch(file_path, pat) for pat in file_globs if isinstance(pat, str) and pat):
+            return False
+
+    max_chars = int(cfg.get("max_chars", 300))
+    max_lines = int(cfg.get("max_lines", 2))
+    if len(old_s) > max_chars or len(new_s) > max_chars:
+        return False
+    if old_s.count("\n") + 1 > max_lines or new_s.count("\n") + 1 > max_lines:
+        return False
+
+    keywords = [str(x).lower() for x in cfg.get("keywords", []) if isinstance(x, str)]
+    combined = f"{old_s}\n{new_s}".lower()
+    if keywords and any(k in combined for k in keywords):
+        return True
+    return _url_host_swap_only(old_s, new_s)
+
+
+def get_shared_search_session_config(project_root: Path) -> dict:
+    user_cfg = get_workflow_guard_config(project_root).get("shared_search_session", {})
+    if not isinstance(user_cfg, dict):
+        user_cfg = {}
+    merged = dict(DEFAULT_SHARED_SEARCH_SESSION_CONFIG)
+    merged_ttl = dict(DEFAULT_SHARED_SEARCH_SESSION_CONFIG.get("ttl_seconds", {}))
+    user_ttl = user_cfg.get("ttl_seconds", {})
+    if isinstance(user_ttl, dict):
+        merged_ttl.update({k: v for k, v in user_ttl.items() if isinstance(v, int) and v > 0})
+    merged.update(user_cfg)
+    merged["ttl_seconds"] = merged_ttl
+    return merged
+
+
+def _shared_session_path(project_root: Path) -> Path:
+    return write_state_path(project_root, ".search-shared-session.json")
+
+
+def reset_shared_search_session(project_root: Path, source: str = "search") -> None:
+    cfg = get_shared_search_session_config(project_root)
+    if not cfg.get("enabled", True):
+        return
+    path = _shared_session_path(project_root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    now = time.time()
+    payload = {
+        "source": source,
+        "started_at": now,
+        "last_activity_at": now,
+        "last_operation_type": "",
+    }
+    path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+
+def _load_shared_session(project_root: Path) -> dict:
+    path = _shared_session_path(project_root)
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def has_shared_search_session(project_root: Path, operation_type: str, complexity: str) -> bool:
+    cfg = get_shared_search_session_config(project_root)
+    if not cfg.get("enabled", True):
+        return False
+    ttl = int(cfg.get("ttl_seconds", {}).get(complexity, 0))
+    if ttl <= 0:
+        return False
+    session = _load_shared_session(project_root)
+    if not session:
+        return False
+    last_activity = session.get("last_activity_at")
+    if not isinstance(last_activity, (int, float)):
+        return False
+    if time.time() - float(last_activity) > ttl:
+        return False
+    last_type = str(session.get("last_operation_type", "") or "")
+    return not last_type or last_type == operation_type
+
+
+def touch_shared_search_session(project_root: Path, operation_type: str) -> None:
+    cfg = get_shared_search_session_config(project_root)
+    if not cfg.get("enabled", True):
+        return
+    path = _shared_session_path(project_root)
+    session = _load_shared_session(project_root)
+    now = time.time()
+    if not session:
+        session = {
+            "source": "guard",
+            "started_at": now,
+            "last_activity_at": now,
+            "last_operation_type": operation_type,
+        }
+    else:
+        session["last_activity_at"] = now
+        session["last_operation_type"] = operation_type
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(session, ensure_ascii=False), encoding="utf-8")

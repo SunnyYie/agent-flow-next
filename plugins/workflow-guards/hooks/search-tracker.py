@@ -11,7 +11,7 @@ import sys
 import time
 from pathlib import Path
 
-from contract_utils import find_project_root, write_state_path
+from contract_utils import find_project_root, reset_shared_search_session, write_state_path
 
 DEFAULT_CRITICAL_TOOLS = ["lark-cli", "glab", "gh", "docker"]
 
@@ -133,6 +133,7 @@ def main() -> None:
     search_param = _search_param(tool_name, tool_input)
 
     if is_valid_search(tool_name, tool_input):
+        reset_shared_search_session(project_root, source=tool_name)
         marker_file = write_state_path(project_root, ".search-done")
         marker_file.parent.mkdir(parents=True, exist_ok=True)
         marker_file.write_text(f"tool={tool_name}\ntime={time.time()}\n", encoding="utf-8")

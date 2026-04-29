@@ -90,6 +90,7 @@ hooks:
 - **claude_settings.py**: Claude Code settings.json hook management, plugin hook sync/migration
 - **plugin.py**: Plugin installation logic (builtin source, local source)
 - **plugin_selection.py**: Interactive plugin selection during init
+- **request_context.py**: Requirement-entry prompt structuring, task-gate defaults, project workflow scaffold generation (`request-context.json`, `task-list.md`, `phase-review.md`, `agent-team-config.yaml`)
 
 **Resource resolution:**
 - **resources/resolver.py**: `ResourceResolver` — overlays skills/wiki/hooks/souls across three layers
@@ -151,12 +152,12 @@ hooks:
 
 ### Plugin Directory (plugins/)
 
-11 built-in plugins, each self-contained with `manifest.yaml`, `commands/`, and optionally `hooks/` and `core/`:
+12 built-in plugins, each self-contained with `manifest.yaml`, `commands/`, and optionally `hooks/` and `core/`:
 
 | Plugin | Namespace | Commands | Hooks | Purpose |
 |--------|-----------|----------|-------|---------|
 | workflow-pipeline | pipeline | pipeline, plan-review, plan-eng-review, add-feature, run, review, qa, ship | — | Pipeline workflow stages |
-| workflow-guards | workflow-guards | — | 16 hooks (guards, enforcers, reminders, trackers) | Runtime enforcers |
+| workflow-guards | workflow-guards | — | 18 hooks (guards, enforcers, reminders, trackers) | Runtime enforcers (requirement-entry gating, UI guard, multi-agent routing, reflection enforcement) |
 | agent-orchestration | agent-orchestration | agent | — | Multi-agent dispatch, structured state, event bus |
 | memory-recall | memory-recall | memory, recall | — | Memory indexing, compression, recall, lifecycle |
 | user-profile | user-profile | user | — | User model and autonomy settings |
@@ -166,6 +167,28 @@ hooks:
 | organization-evolution | organization-evolution | asset, promote, organize | — | Asset promotion, decay, reflection |
 | mcp-factory | mcp-factory | mcp-factory | 2 guards | MCP tool factory guard and commands |
 | ops-doctor | ops-doctor | doctor | — | Health diagnostics |
+| builtin-demo | builtin-demo | demo | 1 hook | Minimal built-in plugin for bootstrap/registry smoke checks |
+
+### Requirement-Entry Workflow (project scope)
+
+Key runtime artifacts created/maintained under `.agent-flow/state/`:
+
+- `request-context.json`: structured user prompt context (documents/project/UI flags/gates)
+- `requirements-initial.md`: initial requirement extraction template
+- `task-list.md`: task decomposition + task-type/agent routing table
+- `phase-review.md`: stage-by-stage reflection template (G1~G4)
+- `agent-team-config.yaml`: main/supervisor/coder/verifier role config and gate policy
+- `flow-context.yaml`: workflow phase + context budget + task/agent state
+
+Key guards in `workflow-guards`:
+
+- `requirement-entry-guard.py`: auto-parse requirement prompts and scaffold state/docs
+- `requirement-entry-enforce.py`: block code edits until requirement-entry prerequisites are met
+- `workflow-enforce.py`: enforce implementation plan, task list completeness, UI constraints (only when `ui_constraints_required=true`), and multi-agent routing by task type
+- `reflection-summary-guard.py` / `reflection-summary-enforce.py`: complexity-based reflection summary reminders and push/MR blocking until `.task-reflection-done` exists
+- `thinking-chain-enforce.py` / `subtask-guard-enforce.py`: enforce search-before-change with two optimizations:
+  - simple string replacement whitelist (e.g., CDN URL host swaps) can bypass heavy search flow
+  - shared search session for continuous same-type operations (`code_edit` / `bash_exec`) with configurable TTL
 
 ### Template System (agent_flow/templates/)
 

@@ -17,7 +17,10 @@ from contract_utils import (
     UNBLOCK_SUFFIX,
     find_project_root,
     get_complexity_level,
+    has_shared_search_session,
+    is_simple_string_replacement,
     read_state_path,
+    touch_shared_search_session,
 )
 
 MAX_SEARCH_AGE_MAP = {
@@ -230,8 +233,18 @@ def main() -> None:
     if not needs_search_check:
         sys.exit(0)
 
+    if is_simple_string_replacement(project_root, tool_name, tool_input):
+        sys.exit(0)
+
+    operation_type = "bash_exec" if tool_name == "Bash" else "code_edit"
     marker_file = read_state_path(project_root, ".search-done")
     if has_recent_search(marker_file, project_root):
+        touch_shared_search_session(project_root, operation_type)
+        sys.exit(0)
+
+    complexity = get_complexity_level(project_root)
+    if has_shared_search_session(project_root, operation_type, complexity):
+        touch_shared_search_session(project_root, operation_type)
         sys.exit(0)
 
     print(f"{CHAIN_PROMPT}\n目标: {target_desc}")

@@ -255,7 +255,7 @@ agent-flow doctor --json
 | 插件 | 命名空间 | 命令 | Hooks | 说明 |
 |------|---------|------|-------|------|
 | workflow-pipeline | pipeline | pipeline, plan-review, plan-eng-review, add-feature, run, review, qa, ship | — | Pipeline 工作流阶段 |
-| workflow-guards | workflow-guards | — | 16 个 (guards, enforcers, reminders, trackers) | 运行时执行器 |
+| workflow-guards | workflow-guards | — | 18 个 (guards, enforcers, reminders, trackers) | 运行时执行器（含 requirement-entry、UI/多Agent门控、反思总结门控） |
 | agent-orchestration | agent-orchestration | agent | — | 多 Agent 调度与结构化状态 |
 | memory-recall | memory-recall | memory, recall | — | 记忆索引、压缩、召回、生命周期 |
 | user-profile | user-profile | user | — | 用户模型与自主权设置 |
@@ -265,6 +265,7 @@ agent-flow doctor --json
 | organization-evolution | organization-evolution | asset, promote, organize | — | 资产晋升、衰减、反思 |
 | mcp-factory | mcp-factory | mcp-factory | 2 个 guards | MCP 工具工厂 |
 | ops-doctor | ops-doctor | doctor | — | 健康诊断 |
+| builtin-demo | builtin-demo | demo | 1 个 hook | 启动与注册链路 smoke-test 插件 |
 
 ---
 
@@ -285,6 +286,65 @@ agent-flow doctor --json
 
 - 检查项目 `.claude/settings.json`
 - 重新 `agent-flow plugin disable/enable <plugin> --scope project`
+
+---
+
+## Requirement-Entry 与反思总结（新增）
+
+当 Claude Code 输入“阅读需求文档并执行任务”类提示词时，`workflow-guards` 会自动触发 requirement-entry 流程：
+
+1. 解析提示词并生成 `.agent-flow/state/request-context.json`
+2. 自动准备流程骨架：
+   - `.agent-flow/state/requirements-initial.md`
+   - `.agent-flow/state/task-list.md`
+   - `.agent-flow/wiki/project-structure.md`
+   - `.agent-flow/state/phase-review.md`
+   - `.agent-flow/state/agent-team-config.yaml`
+
+### UI 门控策略
+
+- 仅当 `request-context.json` 中 `ui_constraints_required=true` 时，才启用 UI 强门控
+- 非 UI 任务不会因为目录路径等误判触发 UI 阻断
+
+### 多 Agent 路由策略
+
+- `task-list.md` 需要包含 `任务类型` 与 `执行Agent`
+- 若存在多个任务类型但都分配给同一个 agent，`workflow-enforce` 会阻断并给出建议分配
+
+### 任务完成后的反思总结
+
+- 中高复杂度任务（`medium/complex`）在 Implement 后会触发反思提醒
+- 自动生成反思草稿并按类型沉淀：
+  - 通用业务经验 -> `.agent-flow/wiki/retrospectives/*.md`
+  - 可复用流程/工具模式 -> `.agent-flow/skills/retrospectives/*/SKILL.md`
+- 在 `git push` / `glab mr` 前，若缺 `.agent-flow/state/.task-reflection-done`，会被硬阻断
+
+### 搜索门控优化（简单替换白名单 + 连续会话共享）
+
+- 对简单字符串替换（如 CDN URL host 替换）支持白名单放行，不再强制每次都先搜索 skills/wiki
+- 对长会话支持“同类型连续操作”共享一次搜索标记（默认：`medium` 2h、`complex` 1.5h）
+- 同一共享会话仅允许同类型操作复用（如 `code_edit` 可连续复用，切到 `bash_exec` 需重新搜索）
+
+可在 `.agent-flow/config.yaml` 配置：
+
+```yaml
+workflow_guards:
+  simple_replace_whitelist:
+    enabled: true
+    max_chars: 300
+    max_lines: 2
+    file_globs:
+      - "**/*"
+    keywords:
+      - "cdn"
+      - "static"
+      - "asset"
+  shared_search_session:
+    enabled: true
+    ttl_seconds:
+      medium: 7200
+      complex: 5400
+```
 
 ---
 
