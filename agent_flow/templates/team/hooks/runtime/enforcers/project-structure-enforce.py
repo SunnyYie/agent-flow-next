@@ -30,7 +30,6 @@ ALLOWED_SEARCH_PREFIXES = [
     "~/.agent-flow/",
     ".agent-flow/skills/",
     ".agent-flow/wiki/",
-    ".dev-workflow/wiki/",
     "~/.claude/",
 ]
 
@@ -62,11 +61,11 @@ def is_source_code_search(search_path: str) -> bool:
 
 def main():
     # 只在 agent-flow 项目中生效
-    if not os.path.isdir(".agent-flow") and not os.path.isdir(".dev-workflow"):
+    if not os.path.isdir(".agent-flow"):
         sys.exit(0)
 
     # 如果 project-structure.md 不存在，不强制（项目可能没初始化）
-    if not os.path.isfile(".dev-workflow/wiki/project-structure.md"):
+    if not os.path.isfile(".agent-flow/wiki/project-structure.md"):
         sys.exit(0)
 
     # 已读过标记，放行
@@ -96,7 +95,7 @@ def main():
             "⛔ 不要重试当前操作！重复同样的操作只会再次被拦截。\n"
             "\n"
             "✅ 解除方法：\n"
-            "  Read .dev-workflow/wiki/project-structure.md\n"
+            "  Read .agent-flow/wiki/project-structure.md\n"
             "  → 找到需求关键词对应的 Tag → 定位到代码目录\n"
             "  → 再在目标目录内搜索具体组件\n"
             "  读取后标记自动创建，后续搜索不再拦截。\n"

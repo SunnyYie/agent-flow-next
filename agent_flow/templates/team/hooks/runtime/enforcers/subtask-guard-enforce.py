@@ -52,7 +52,7 @@ CODE_FILENAMES = {
 }
 
 # 允许的路径前缀（不受 subtask-guard 检查限制）
-ALLOWED_PATH_PREFIXES = (".agent-flow", ".dev-workflow", ".claude")
+ALLOWED_PATH_PREFIXES = (".agent-flow", ".claude")
 
 GUARD_PROMPT = f"""[AgentFlow BLOCKED] Subtask-guard 未执行 — 你没有在修改代码前搜索知识库！
 

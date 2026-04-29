@@ -65,7 +65,7 @@ def reset_error_count():
 
 def main():
     # 只在 agent-flow 项目中生效
-    if not os.path.isdir(".agent-flow") and not os.path.isdir(".dev-workflow"):
+    if not os.path.isdir(".agent-flow"):
         sys.exit(0)
 
     # 读取 hook 输入

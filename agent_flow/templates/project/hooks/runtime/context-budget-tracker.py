@@ -48,7 +48,7 @@ STALE_MULTIPLIER = 3
 def _find_project_root() -> Path | None:
     cwd = Path.cwd()
     for parent in [cwd, *cwd.parents]:
-        if (parent / ".agent-flow").exists() or (parent / ".dev-workflow").exists():
+        if (parent / ".agent-flow").exists():
             return parent
         if parent == Path.home():
             break
@@ -56,18 +56,15 @@ def _find_project_root() -> Path | None:
 
 
 def _find_flow_context_path(project_root: Path) -> Path | None:
-    """Find flow-context.yaml path, supporting .agent-flow/ and .dev-workflow/."""
-    for state_dir in [".agent-flow/state", ".dev-workflow/state"]:
-        path = project_root / state_dir / "flow-context.yaml"
-        if path.is_file():
-            return path
+    """Find flow-context.yaml path."""
+    path = project_root / ".agent-flow" / "state" / "flow-context.yaml"
+    if path.is_file():
+        return path
     return None
 
 
 def _default_flow_context_path(project_root: Path) -> Path:
     """Get default flow-context.yaml path (for creating new files)."""
-    if (project_root / ".dev-workflow").is_dir():
-        return project_root / ".dev-workflow" / "state" / "flow-context.yaml"
     return project_root / ".agent-flow" / "state" / "flow-context.yaml"
 
 

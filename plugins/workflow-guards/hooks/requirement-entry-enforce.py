@@ -13,14 +13,47 @@ from contract_utils import NO_RETRY_LINE, UNBLOCK_SUFFIX, is_readonly_bash
 STATE_FILE = ".claude/.requirement-entry-state.json"
 
 CODE_EXTENSIONS = {
-    ".ts", ".tsx", ".js", ".jsx", ".py", ".rs", ".go", ".java", ".kt",
-    ".swift", ".m", ".h", ".c", ".cpp", ".rb", ".php", ".vue", ".svelte",
-    ".css", ".scss", ".less", ".html", ".sql", ".graphql", ".sh", ".bash", ".zsh",
+    ".ts",
+    ".tsx",
+    ".js",
+    ".jsx",
+    ".py",
+    ".rs",
+    ".go",
+    ".java",
+    ".kt",
+    ".swift",
+    ".m",
+    ".h",
+    ".c",
+    ".cpp",
+    ".rb",
+    ".php",
+    ".vue",
+    ".svelte",
+    ".css",
+    ".scss",
+    ".less",
+    ".html",
+    ".sql",
+    ".graphql",
+    ".sh",
+    ".bash",
+    ".zsh",
 }
 
 CODE_FILENAMES = {
-    "package.json", "tsconfig.json", "Makefile", "Dockerfile", "Podfile", "Gemfile",
-    "build.gradle", "settings.gradle", "app.json", "babel.config.js", "metro.config.js",
+    "package.json",
+    "tsconfig.json",
+    "Makefile",
+    "Dockerfile",
+    "Podfile",
+    "Gemfile",
+    "build.gradle",
+    "settings.gradle",
+    "app.json",
+    "babel.config.js",
+    "metro.config.js",
 }
 
 
@@ -46,10 +79,8 @@ def _is_allowed_path(file_path: str) -> bool:
     normalized = file_path.replace("\\", "/")
     return (
         normalized.startswith(".agent-flow/")
-        or normalized.startswith(".dev-workflow/")
         or normalized.startswith(".claude/")
         or "/.agent-flow/" in normalized
-        or "/.dev-workflow/" in normalized
         or "/.claude/" in normalized
     )
 
@@ -79,7 +110,7 @@ def _block_message(state: dict, target: str) -> str:
     if state.get("fewshots_exists") and not state.get("fewshots_read"):
         lines.append(f"  2. 先阅读 `{fewshots}`")
     if not state.get("agent_flow_ready"):
-        lines.append("  3. 确保当前项目已完成 `agent-flow init --dev-workflow`")
+        lines.append("  3. 确保当前项目已完成 `agent-flow init`")
     lines.append("  4. 完成后再进入 pre-flight / 需求拆解 / 实现")
     lines.append(f"  {UNBLOCK_SUFFIX}")
     return "\n".join(lines)

@@ -33,29 +33,22 @@ LEGACY_PLAN_MARKERS = [
 def find_project_root(start: str | None = None) -> Path | None:
     current = Path(start or os.getcwd()).resolve()
     for candidate in [current, *current.parents]:
-        if (candidate / ".agent-flow").exists() or (candidate / ".dev-workflow").exists():
+        if (candidate / ".agent-flow").exists():
             return candidate
     return None
 
 
-def get_state_dirs(project_root: Path) -> tuple[Path, Path]:
-    return (
-        project_root / ".agent-flow" / "state",
-        project_root / ".dev-workflow" / "state",
-    )
+def get_state_dir(project_root: Path) -> Path:
+    return project_root / ".agent-flow" / "state"
 
 
 def read_state_path(project_root: Path, filename: str) -> Path:
-    canonical, legacy = get_state_dirs(project_root)
-    for path in [canonical / filename, legacy / filename]:
-        if path.is_file():
-            return path
-    return canonical / filename
+    return get_state_dir(project_root) / filename
 
 
 def write_state_path(project_root: Path, filename: str) -> Path:
-    canonical, _ = get_state_dirs(project_root)
-    return canonical / filename
+    state_dir = get_state_dir(project_root)
+    return state_dir / filename
 
 
 def detect_plan_format(content: str) -> str:
@@ -147,7 +140,7 @@ CODE_FILENAMES = {
     "build.gradle", "settings.gradle", "app.json", "babel.config.js", "metro.config.js",
 }
 
-ALLOWED_PATH_PREFIXES = (".agent-flow", ".dev-workflow", ".claude")
+ALLOWED_PATH_PREFIXES = (".agent-flow", ".claude")
 
 READONLY_BASH_PREFIXES = (
     "ls", "cat", "head", "tail", "find", "grep", "rg", "wc", "which", "pwd", "whoami",

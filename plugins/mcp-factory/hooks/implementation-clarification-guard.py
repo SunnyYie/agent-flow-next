@@ -101,26 +101,20 @@ CODE_FILENAMES = {
     "settings.gradle",
 }
 
-STATE_ALLOWED_PREFIXES = (".agent-flow/state", ".dev-workflow/state")
+STATE_ALLOWED_PREFIXES = (".agent-flow/state",)
 DOC_ALLOWED_EXTENSIONS = {".md", ".txt", ".rst", ".adoc", ".yaml", ".yml", ".json"}
 
 
 def _find_project_root() -> Path | None:
     cwd = Path.cwd().resolve()
     for candidate in [cwd, *cwd.parents]:
-        if (candidate / ".agent-flow").exists() or (candidate / ".dev-workflow").exists():
+        if (candidate / ".agent-flow").exists():
             return candidate
     return None
 
 
 def _state_marker_path(project_root: Path) -> Path:
-    canonical = project_root / ".agent-flow" / "state" / MARKER_NAME
-    legacy = project_root / ".dev-workflow" / "state" / MARKER_NAME
-    if canonical.is_file():
-        return canonical
-    if legacy.is_file():
-        return legacy
-    return canonical
+    return project_root / ".agent-flow" / "state" / MARKER_NAME
 
 
 def _load_marker_entries(path: Path) -> list[dict[str, str]]:
@@ -187,9 +181,7 @@ def _is_state_doc(file_path: str) -> bool:
     if any(prefix in normalized for prefix in STATE_ALLOWED_PREFIXES):
         return True
     _, ext = os.path.splitext(normalized)
-    return ext.lower() in DOC_ALLOWED_EXTENSIONS and (
-        "/.agent-flow/" in normalized or "/.dev-workflow/" in normalized
-    )
+    return ext.lower() in DOC_ALLOWED_EXTENSIONS and "/.agent-flow/" in normalized
 
 
 def _is_readonly_bash(command: str) -> bool:

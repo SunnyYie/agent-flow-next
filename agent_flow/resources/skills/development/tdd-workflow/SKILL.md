@@ -4,9 +4,9 @@
 When implementing a new feature or fixing a bug.
 
 ## Required Reading
-- `.dev-workflow/Agent.md` — 铁律
+- `.agent-flow/Agent.md` — 铁律
 - `documents/实施计划.md` — 当前任务的完成标志和测试方法
-- `.dev-workflow/executor/skills/code_standards.md` — 代码规范
+- `.agent-flow/skills/code_standards.md` — 代码规范
 
 ## Procedure
 

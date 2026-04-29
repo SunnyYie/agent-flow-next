@@ -19,7 +19,7 @@ AgentFlow 插件目录，每个插件通过 `manifest.yaml` 声明命令（comma
 
 ---
 
-## 3. hermes-skillops
+## 2. hermes-skillops
 
 Hermes 原生工具 + Skill 技能管理。
 
@@ -47,17 +47,7 @@ Skill 存储路径：项目级 `.agent-flow/skills/` 或全局 `~/.agent-flow/sk
 
 ---
 
-## 4. legacy-migration
-
-从旧版 agent-flow 迁移资产到新结构。
-
-| 命令 | 说明 |
-|------|------|
-| `migrate-legacy --legacy-project <dir> --global-source <dir> --team-id <id> [--include-project-knowledge]` | 迁移旧版项目资产。`--include-project-knowledge` 同时迁移项目级知识库 |
-
----
-
-## 5. mcp-factory
+## 3. mcp-factory
 
 MCP Tool Factory 提案与审批工作流，含两个自动守护钩子。
 
@@ -80,7 +70,7 @@ MCP Tool Factory 提案与审批工作流，含两个自动守护钩子。
 
 ---
 
-## 6. memory-recall
+## 4. memory-recall
 
 记忆管理与跨会话回顾。
 
@@ -104,11 +94,11 @@ MCP Tool Factory 提案与审批工作流，含两个自动守护钩子。
 | `recall --recent <n>` | 显示最近 N 条会话摘要 |
 | `recall --backtrack <id>` | 回溯指定 ID 的完整会话摘要 |
 
-搜索路径：`.agent-flow/wiki/recall/` 和 `.dev-workflow/wiki/recall/`。
+搜索路径：`.agent-flow/wiki/recall/` 和 `~/.agent-flow/wiki/recall/`。
 
 ---
 
-## 7. ops-doctor
+## 5. ops-doctor
 
 诊断当前项目的 AgentFlow 配置和资产完整性。
 
@@ -118,7 +108,7 @@ MCP Tool Factory 提案与审批工作流，含两个自动守护钩子。
 
 ---
 
-## 8. organization-evolution
+## 6. organization-evolution
 
 资产管理、知识晋升与整理。
 
@@ -150,7 +140,7 @@ MCP Tool Factory 提案与审批工作流，含两个自动守护钩子。
 
 ---
 
-## 9. runtime-adapters
+## 7. runtime-adapters
 
 将 AgentFlow 规则适配到不同 AI 编码平台，并管理 Claude Code hooks。
 
@@ -174,7 +164,7 @@ MCP Tool Factory 提案与审批工作流，含两个自动守护钩子。
 
 ---
 
-## 10. team-collaboration
+## 8. team-collaboration
 
 团队协作与项目绑定。
 
@@ -194,7 +184,7 @@ MCP Tool Factory 提案与审批工作流，含两个自动守护钩子。
 
 ---
 
-## 11. user-profile
+## 9. user-profile
 
 用户偏好与自主级别管理。
 
@@ -209,7 +199,7 @@ MCP Tool Factory 提案与审批工作流，含两个自动守护钩子。
 
 ---
 
-## 12. workflow-guards
+## 10. workflow-guards
 
 工作流守护钩子集，无命令，通过 12 个 hooks 自动执行质量门控。
 
@@ -227,7 +217,7 @@ MCP Tool Factory 提案与审批工作流，含两个自动守护钩子。
 | Hook | 匹配工具 | 说明 |
 |------|---------|------|
 | `preflight-enforce` | Write/Edit/Bash | 执行写操作前强制完成预飞检查 |
-| `dev-workflow-enforce` | Write/Edit/Bash | 强制遵守开发工作流规范 |
+| `workflow-enforce` | Write/Edit/Bash | 强制遵守开发工作流规范 |
 | `project-structure-enforce` | Grep | 搜索时强制遵守项目结构规范 |
 | `thinking-chain-enforce` | Write/Edit/Bash | 强制思考链：写操作前必须完成推理记录 |
 | `subtask-guard-enforce` | Write/Edit/Bash | 子任务守卫：确保在正确子任务上下文内操作 |
@@ -242,7 +232,7 @@ MCP Tool Factory 提案与审批工作流，含两个自动守护钩子。
 
 ---
 
-## 13. workflow-pipeline
+## 11. workflow-pipeline
 
 开发流水线工作流，管理从计划到发布的完整流程。
 

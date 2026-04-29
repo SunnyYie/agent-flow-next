@@ -28,7 +28,7 @@
 - 陌生任务第一次允许走探索链路
 - 从 `Memory.md` 提取成功路径中的 `[EXECUTE] / [VERIFY] / [SUCCESS]`
 - 自动过滤 `[ERROR] / [FAIL]` 与重复步骤
-- 将稳定路径固化为 `.dev-workflow/skills/` 中的技能
+- 将稳定路径固化为 `.agent-flow/skills/` 中的技能
 - 同步更新 `.agent-flow/state/skill-tree.json`
 - 结晶技能内置治理信息：`Validation Command`、`Validation Checks`、`Invalidation Conditions`
 
@@ -38,8 +38,8 @@
 
 - 短期会话记忆：`.agent-flow/memory/*/Memory.md`
 - 长期经验记忆：`.agent-flow/memory/*/Soul.md`
-- 长期语义记忆：`.dev-workflow/wiki/`、`.agent-flow/wiki/recall/`、全局 `~/.agent-flow/wiki/`
-- 技能树记忆：`.dev-workflow/skills/` + `.agent-flow/state/skill-tree.json`
+- 长期语义记忆：`.agent-flow/wiki/`、`.agent-flow/wiki/recall/`、全局 `~/.agent-flow/wiki/`
+- 技能树记忆：`.agent-flow/skills/` + `.agent-flow/state/skill-tree.json`
 
 这比 `GenericAgent` 更偏“项目知识库 + 程序性技能并存”，而不是只押注技能树。
 

@@ -59,7 +59,7 @@ def main() -> None:
     if not changed:
         return
 
-    if state.get("claude_md_read") and (not state.get("fewshots_exists") or state.get("fewshots_read")):
+    if state.get("claude_md_read") and state.get("fewshots_read"):
         if state.get("agent_flow_ready"):
             state["status"] = "ready"
         else:

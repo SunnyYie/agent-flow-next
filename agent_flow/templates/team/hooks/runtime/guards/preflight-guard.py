@@ -25,6 +25,7 @@ DEV_IRON_LAWS = """
 【思维链】执行每个子任务的硬性要求（无搜索标记 → Hook 阻断执行）：
   思考 → 搜索解决方案 → 确认方案 → 执行 → 验证 → 未解决则继续思考"""
 
+
 def check_stale_acceptance_marker():
     """检查用户验收标记是否属于当前任务，如果不是则清除过时标记"""
     marker = ".agent-flow/state/.user-acceptance-done"
@@ -42,7 +43,9 @@ def check_stale_acceptance_marker():
         current_task = ""
         with open(phase_file, "r", encoding="utf-8") as f:
             for line in f:
-                if line.strip().startswith("# 任务:") or line.strip().startswith("# Task:"):
+                if line.strip().startswith("# 任务:") or line.strip().startswith(
+                    "# Task:"
+                ):
                     current_task = line.strip().lstrip("# ").strip()
         # 如果标记中的任务与当前任务不匹配，删除过时标记
         if marker_task and current_task and marker_task != current_task:
@@ -54,16 +57,16 @@ def check_stale_acceptance_marker():
 def main():
     # 只在配置了 agent-flow 的项目中生效
     has_agent_flow = os.path.isdir(".agent-flow")
-    has_dev_workflow = os.path.isdir(".dev-workflow")
 
-    if not has_agent_flow and not has_dev_workflow:
-        # No agent-flow and no dev-workflow: suggest initialization
-        print(f"""<system-reminder>
+    if not has_agent_flow:
+        # No agent-flow: suggest initialization
+        print(
+            f"""<system-reminder>
 [AgentFlow] 检测到当前项目未初始化 agent-flow。
 
 为了让你更高效地理解项目和工作，建议执行初始化：
 
-1. 运行命令: agent-flow init --dev-workflow
+1. 运行命令: agent-flow init
 2. 初始化完成后，按 Agent.md 启动协议工作
 
 初始化将自动：
@@ -72,7 +75,8 @@ def main():
 - 创建项目配置和工作流文件
 
 如果不想初始化，可忽略此提示继续工作。
-</system-reminder>""")
+</system-reminder>"""
+        )
         sys.exit(0)
 
     # 清除过时的验收标记（任务变更时）
@@ -84,39 +88,28 @@ def main():
         config_path = ".agent-flow/config.yaml"
         if not os.path.isfile(config_path) or os.path.getsize(config_path) < 10:
             incomplete_issues.append("config.yaml 缺失或为空")
-    if has_dev_workflow:
-        if not os.path.isfile(".dev-workflow/Agent.md"):
-            incomplete_issues.append("Agent.md 缺失")
-        if not os.path.isfile(".dev-workflow/main/SOUL.md"):
-            incomplete_issues.append("main/SOUL.md 缺失")
-        if not os.path.isfile(".dev-workflow/wiki/INDEX.md"):
-            incomplete_issues.append("wiki/INDEX.md 缺失")
 
     # Detect content quality issues (files exist but lack project context)
     content_issues = []
     runtime_issues = []
-    if has_dev_workflow:
-        agent_md = ".dev-workflow/Agent.md"
-        if os.path.isfile(agent_md):
-            try:
-                with open(agent_md, "r", encoding="utf-8") as f:
-                    content = f.read()
-                # If project overview is still a placeholder, context is empty
-                if "请填写项目方向" in content and "项目结构未扫描" in content:
-                    content_issues.append("Agent.md 项目上下文为空（仍是模板占位符，需填写项目方向或重新 init）")
-            except Exception:
-                pass
-        structure_wiki = ".dev-workflow/wiki/project-structure.md"
+    if has_agent_flow:
+        structure_wiki = ".agent-flow/wiki/project-structure.md"
         if not os.path.isfile(structure_wiki) or os.path.getsize(structure_wiki) < 50:
-            content_issues.append("project-structure.md 缺失或为空（无 Tag→Directory 索引，运行 agent-flow init --dev-workflow --force 生成）")
+            content_issues.append(
+                "project-structure.md 缺失或为空（无 Tag→Directory 索引，运行 agent-flow init --force 生成）"
+            )
 
     # 检查 Claude hooks 是否已接入（新增）
     project_root = find_project_root()
     if project_root is not None:
         if not has_agent_flow_hooks(project_root):
-            runtime_issues.append("`.claude/settings*.json` 未检测到 agent-flow hook 注册（规范无法强制执行）")
+            runtime_issues.append(
+                "`.claude/settings*.json` 未检测到 agent-flow hook 注册（规范无法强制执行）"
+            )
     else:
-        runtime_issues.append("`.claude/settings*.json` 缺失（建议注册 agent-flow hooks）")
+        runtime_issues.append(
+            "`.claude/settings*.json` 缺失（建议注册 agent-flow hooks）"
+        )
 
     # 关键工具可用性提示（新增）
     if not is_cli_available("lark-cli"):
@@ -131,7 +124,7 @@ def main():
         incomplete_warning = (
             f"\n\n[AgentFlow WARNING] 项目初始化不完整，以下文件缺失:\n"
             f"{issues_str}\n"
-            f"建议运行: agent-flow init --dev-workflow --force\n"
+            f"建议运行: agent-flow init --force\n"
             f"补全缺失文件后，按启动协议工作。"
         )
     if content_issues:
@@ -152,8 +145,7 @@ def main():
     # 检查 pre-flight 是否已完成（current_phase.md 非空即为已规划）
     phase_file = ".agent-flow/state/current_phase.md"
     preflight_done = (
-        os.path.isfile(phase_file)
-        and os.path.getsize(phase_file) > 10  # 非空文件
+        os.path.isfile(phase_file) and os.path.getsize(phase_file) > 10  # 非空文件
     )
 
     if preflight_done:
@@ -188,12 +180,14 @@ def main():
             acceptance_warning = "\n\n[AgentFlow REMINDER] 用户验收(.user-acceptance-done)未完成。\n推送代码前必须获得用户验收确认（Medium/Complex 任务 hook 强制执行）。"
 
         # 注入开发铁律提醒
-        print(f"[AgentFlow] Pre-flight 已完成。{DEV_IRON_LAWS}\n每个子任务前执行 subtask-guard 搜索知识库。{sq_warning}{complexity_warning}{clarified_warning}{design_warning}{acceptance_warning}{incomplete_warning}")
+        print(
+            f"[AgentFlow] Pre-flight 已完成。{DEV_IRON_LAWS}\n每个子任务前执行 subtask-guard 搜索知识库。{sq_warning}{complexity_warning}{clarified_warning}{design_warning}{acceptance_warning}{incomplete_warning}"
+        )
         sys.exit(0)
 
     # === Pre-flight 未完成 === 强制注入协议指令
 
-    preflight_steps_no_dev = f"""<system-reminder>
+    print(f"""<system-reminder>
 [AgentFlow Protocol — MANDATORY] PRE-FLIGHT CHECK 未完成，你必须先完成以下步骤才能执行任何任务：
 
 【禁止跳过】按顺序执行：
@@ -210,32 +204,7 @@ def main():
 - 用户未确认就开始执行
 
 {DEV_IRON_LAWS}{incomplete_warning}
-</system-reminder>"""
-
-    preflight_steps_with_dev = f"""<system-reminder>
-[AgentFlow Protocol — MANDATORY] PRE-FLIGHT CHECK 未完成，你必须先完成以下步骤才能执行任何任务：
-
-【禁止跳过】按顺序执行：
-1. 读取 .dev-workflow/Agent.md（如存在），按其 boot protocol 执行
-2. 读取 ~/.agent-flow/skills/workflow/pre-flight-check/handler.md，按其 5 步 Procedure 执行
-3. Step 1: 检查项目配置（.dev-workflow/ + .agent-flow/config.yaml）
-4. Step 2: 知识检索（5 次搜索：项目技能→全局技能→Soul→项目Wiki→全局Wiki）
-5. Step 3: 将分析写入 .agent-flow/memory/main/Memory.md
-6. Step 4: 将计划写入 .agent-flow/state/current_phase.md
-7. Step 5: 向用户展示计划摘要，等待用户确认
-
-违规行为（将被 Hook 拦截）：
-- 未完成 5 步就开始写代码或执行命令
-- 不搜索 Skill/Soul/Wiki 就执行子任务
-- 用户未确认就开始执行
-
-{DEV_IRON_LAWS}{incomplete_warning}
-</system-reminder>"""
-
-    if has_dev_workflow:
-        print(preflight_steps_with_dev)
-    else:
-        print(preflight_steps_no_dev)
+</system-reminder>""")
 
     sys.exit(0)
 

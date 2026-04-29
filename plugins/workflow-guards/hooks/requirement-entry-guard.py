@@ -94,18 +94,17 @@ def _find_fewshots_file(repo_root: Path) -> Path | None:
     if preferred.is_file():
         return preferred
     fewshots_dir = repo_root / "fewshots"
-    if not fewshots_dir.is_dir():
-        return None
-    for candidate in sorted(fewshots_dir.glob("*.md")):
-        if candidate.is_file():
-            return candidate
+    if fewshots_dir.is_dir():
+        for candidate in sorted(fewshots_dir.glob("*.md")):
+            if candidate.is_file():
+                return candidate
     return None
 
 
 def _run_init(repo_root: Path) -> tuple[bool, str]:
     try:
         result = subprocess.run(
-            ["agent-flow", "init", "--dev-workflow"],
+            ["agent-flow", "init", "--project"],
             cwd=str(repo_root),
             capture_output=True,
             text=True,
@@ -119,7 +118,7 @@ def _run_init(repo_root: Path) -> tuple[bool, str]:
         return False, str(exc)
 
     if result.returncode == 0:
-        return True, "initialized"
+        return True, "initialized with agent-flow init --project"
     stderr = (result.stderr or result.stdout or "").strip()
     return False, stderr or f"exit {result.returncode}"
 
@@ -148,7 +147,9 @@ def _write_state(
         "init_status": init_status.strip(),
         "allow_design_assets": any(hint in prompt.lower() for hint in DESIGN_HINTS),
     }
-    state_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    state_path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
     return state_path
 
 
@@ -162,40 +163,47 @@ def main() -> None:
     claude_md = repo_root / "CLAUDE.md"
     fewshots_file = _find_fewshots_file(repo_root)
 
-    has_agent_flow = (repo_root / ".agent-flow").exists() or (repo_root / ".dev-workflow").exists()
+    has_agent_flow = (repo_root / ".agent-flow").exists()
     init_status = ""
     if not has_agent_flow:
         ok, detail = _run_init(repo_root)
-        has_agent_flow = ok and ((repo_root / ".agent-flow").exists() or (repo_root / ".dev-workflow").exists())
+        has_agent_flow = ok and (repo_root / ".agent-flow").exists()
         if ok:
             init_status = (
-                "\n[AgentFlow] 当前项目原先未初始化，已自动执行 `agent-flow init --dev-workflow`。"
+                "\n[AgentFlow] 当前项目原先未初始化，已自动执行 `agent-flow init --project`。"
             )
         else:
             init_status = (
-                "\n[AgentFlow WARNING] 当前项目未初始化，尝试自动执行 `agent-flow init --dev-workflow` 失败："
+                "\n[AgentFlow WARNING] 当前项目未初始化，尝试自动执行 `agent-flow init --project` 失败："
                 f"\n{detail}"
             )
-    state_path = _write_state(repo_root, prompt, claude_md, fewshots_file, has_agent_flow, init_status)
+    state_path = _write_state(
+        repo_root, prompt, claude_md, fewshots_file, has_agent_flow, init_status
+    )
 
     read_lines = []
     if claude_md.is_file():
         read_lines.append(f"1. 必须先阅读 `{claude_md}`")
     else:
-        read_lines.append(f"1. 当前项目缺少 `{claude_md}`，需要先补齐或确认替代协议文件")
+        read_lines.append(
+            f"1. 当前项目缺少 `{claude_md}`，需要先补齐或确认替代协议文件"
+        )
     if fewshots_file is not None:
-        read_lines.append(f"2. 必须先阅读 `{fewshots_file}`")
+        if fewshots_file.is_relative_to(repo_root):
+            read_lines.append(f"2. 必须先阅读 `{fewshots_file}`")
+        else:
+            read_lines.append(
+                f"2. 当前项目未提供 fewshots，必须先阅读 fallback fewshot `{fewshots_file}`"
+            )
     else:
         read_lines.append(f"2. 当前项目未找到 `fewshots/*.md`，需要先补齐 fewshots")
 
     workflow_line = (
-        "3. 若项目已包含 `.agent-flow`/`.dev-workflow`，后续必须参考 fewshots 和 agent-flow 流程执行，"
+        "3. 若项目已包含 `.agent-flow`，后续必须参考 fewshots 和 agent-flow 流程执行，"
         "不能直接跳到开发"
     )
     if not has_agent_flow:
-        workflow_line = (
-            "3. 当前项目尚未形成可用的 agent-flow 工作流，需先完成初始化问题后再继续任务"
-        )
+        workflow_line = "3. 当前项目尚未形成可用的 agent-flow 工作流，需先完成初始化问题后再继续任务"
 
     print(
         "<system-reminder>\n"

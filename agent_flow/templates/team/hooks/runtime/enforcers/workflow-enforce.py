@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-AgentFlow Dev Workflow Enforcer — PreToolUse hook.
+AgentFlow Workflow Enforcer — PreToolUse hook.
 强制执行开发流程铁律（pre-flight 之后也持续生效）。
 """
 
@@ -97,10 +97,8 @@ def _is_allowed_path(file_path: str) -> bool:
     normalized = file_path.replace("\\", "/")
     return (
         normalized.startswith(".agent-flow/")
-        or normalized.startswith(".dev-workflow/")
         or normalized.startswith(".claude/")
         or "/.agent-flow/" in normalized
-        or "/.dev-workflow/" in normalized
         or "/.claude/" in normalized
     )
 
@@ -223,8 +221,6 @@ def is_knowledge_search(tool_name: str, tool_input: dict) -> bool:
         "agent-flow/skills",
         "agent-flow/wiki",
         "agent-flow/memory",
-        "dev-workflow/skills",
-        "dev-workflow/wiki",
         "Soul",
         "soul.md",
     ]

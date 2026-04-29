@@ -50,7 +50,6 @@ def is_agent_flow_path(file_path: str) -> bool:
     normalized = os.path.normpath(file_path)
     return (
         ".agent-flow/" in normalized
-        or ".dev-workflow/" in normalized
         or ".claude/" in normalized
     )
 
@@ -90,7 +89,6 @@ def main():
         sys.exit(0)
 
     # 检查 pre-flight 是否已完成
-    # 同时检查 .agent-flow/state/ 和 .dev-workflow/state/ 两个路径
     phase_file = read_state_path(project_root, "current_phase.md")
     complexity_file = read_state_path(project_root, ".complexity-level")
 

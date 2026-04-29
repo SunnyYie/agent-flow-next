@@ -23,7 +23,7 @@ COMPLEXITY_FILE_NAMES = [".complexity-level"]
 def _find_project_root() -> Path | None:
     cwd = Path.cwd()
     for parent in [cwd, *cwd.parents]:
-        if (parent / ".agent-flow").exists() or (parent / ".dev-workflow").exists():
+        if (parent / ".agent-flow").exists():
             return parent
         if parent == Path.home():
             break
@@ -32,31 +32,29 @@ def _find_project_root() -> Path | None:
 
 def _read_current_phase(project_root: Path) -> str:
     """Read current_phase.md content."""
-    for state_dir in [".agent-flow/state", ".dev-workflow/state"]:
-        phase_path = project_root / state_dir / "current_phase.md"
-        if phase_path.is_file():
-            try:
-                return phase_path.read_text(encoding="utf-8")
-            except OSError:
-                pass
+    phase_path = project_root / ".agent-flow/state" / "current_phase.md"
+    if phase_path.is_file():
+        try:
+            return phase_path.read_text(encoding="utf-8")
+        except OSError:
+            pass
     return ""
 
 
 def _get_complexity_level(project_root: Path) -> str:
     """Read complexity level from .complexity-level file."""
-    for state_dir in [".agent-flow/state", ".dev-workflow/state"]:
-        for filename in COMPLEXITY_FILE_NAMES:
-            path = project_root / state_dir / filename
-            if path.is_file():
-                try:
-                    for line in path.read_text(encoding="utf-8").splitlines():
-                        stripped = line.strip()
-                        if stripped.startswith("level="):
-                            level = stripped.split("=", 1)[1].strip().lower()
-                            if level in ("simple", "medium", "complex"):
-                                return level
-                except OSError:
-                    pass
+    for filename in COMPLEXITY_FILE_NAMES:
+        path = project_root / ".agent-flow/state" / filename
+        if path.is_file():
+            try:
+                for line in path.read_text(encoding="utf-8").splitlines():
+                    stripped = line.strip()
+                    if stripped.startswith("level="):
+                        level = stripped.split("=", 1)[1].strip().lower()
+                        if level in ("simple", "medium", "complex"):
+                            return level
+            except OSError:
+                pass
     return "medium"  # Default to medium for safety
 
 
@@ -107,10 +105,8 @@ def _is_execute_phase(phase_content: str) -> bool:
 
 def _read_flow_context_budget(project_root: Path) -> dict:
     """Read budget info from flow-context.yaml using simple parsing."""
-    for state_dir in [".agent-flow/state", ".dev-workflow/state"]:
-        fc_path = project_root / state_dir / "flow-context.yaml"
-        if not fc_path.is_file():
-            continue
+    fc_path = project_root / ".agent-flow/state" / "flow-context.yaml"
+    if fc_path.is_file():
         try:
             content = fc_path.read_text(encoding="utf-8")
             budget = {}
@@ -173,17 +169,15 @@ def main() -> None:
 
     # Check agent-team-config.yaml for team mode
     team_mode = ""
-    for state_dir in [".agent-flow/state", ".dev-workflow/state"]:
-        team_config_path = project_root / state_dir / "agent-team-config.yaml"
-        if team_config_path.is_file():
-            try:
-                import yaml as _yaml
-                with open(team_config_path, encoding="utf-8") as f:
-                    team_data = _yaml.safe_load(f)
-                team_mode = team_data.get("team_mode", "")
-            except Exception:
-                pass
-            break
+    team_config_path = project_root / ".agent-flow/state" / "agent-team-config.yaml"
+    if team_config_path.is_file():
+        try:
+            import yaml as _yaml
+            with open(team_config_path, encoding="utf-8") as f:
+                team_data = _yaml.safe_load(f)
+            team_mode = team_data.get("team_mode", "")
+        except Exception:
+            pass
 
     # Check if we're in EXECUTE phase
     in_execute = _is_execute_phase(phase_content)
@@ -231,7 +225,7 @@ def main() -> None:
                 "  - Executor: MUST be dispatched for code implementation\n"
                 "  - Verifier: MUST be dispatched for independent acceptance\n"
                 "  - Main Agent: coordinator ONLY — prohibited from direct search/implementation/verification\n"
-                "  - Reference: .dev-workflow/skills/agent-team-init/handler.md"
+                "  - Reference: .agent-flow/skills/agent-team-init/handler.md"
             )
         elif team_mode == "search-only":
             team_info = (

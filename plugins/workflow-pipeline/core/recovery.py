@@ -137,7 +137,7 @@ class CheckpointData(BaseModel):
 class RecoveryManager:
     """Handles interruption recovery and checkpoint management.
 
-    Auto-detects the project workflow directory (.agent-flow/ or .dev-workflow/)
+    Auto-detects the project workflow directory (.agent-flow/)
     and provides methods to detect, diagnose, and recover from interrupted
     workflows.
     """

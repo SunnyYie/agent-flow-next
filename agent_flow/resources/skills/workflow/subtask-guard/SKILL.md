@@ -109,7 +109,7 @@ created: 2026-04-13
 
 **自动恢复**（v2 已内置）：
 
-- `.subtask-guard-state.json`：30 分钟无编辑活动自动过期重置（`dev-workflow-enforce.py` 管理）
+- `.subtask-guard-state.json`：30 分钟无编辑活动自动过期重置（`workflow-enforce.py` 管理）
 - `.subtask-guard-done` / `.search-done` 标记：按复杂度自动过期（Simple 60min / Medium 30min / Complex 20min，`subtask-guard-enforce.py` 管理）
 
 **手动恢复**：执行一次知识库搜索即可重置：

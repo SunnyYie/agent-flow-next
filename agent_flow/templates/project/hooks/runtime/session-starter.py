@@ -18,11 +18,9 @@ from pathlib import Path
 # --- 配置 ---
 
 DB_DIR_PROJECT = ".agent-flow"
-DB_DIR_DEV = ".dev-workflow"
 DB_FILENAME = "observations.db"
 
 SESSION_MARKER_DIR = ".agent-flow/state"
-SESSION_MARKER_ALT = ".dev-workflow/state"
 SESSION_MARKER_FILENAME = ".current-session-id"
 
 # 用户提示截断
@@ -43,9 +41,8 @@ CREATE TABLE IF NOT EXISTS sessions (
 
 def get_db_path() -> str:
     """确定数据库路径"""
-    for base in [DB_DIR_PROJECT, DB_DIR_DEV]:
-        if os.path.isdir(base):
-            return os.path.join(base, DB_FILENAME)
+    if os.path.isdir(DB_DIR_PROJECT):
+        return os.path.join(DB_DIR_PROJECT, DB_FILENAME)
     return os.path.join(DB_DIR_PROJECT, DB_FILENAME)
 
 
@@ -67,13 +64,12 @@ def generate_session_id() -> str:
 
 def write_session_marker(session_id: str) -> None:
     """将会话 ID 写入标记文件"""
-    for marker_dir in [SESSION_MARKER_DIR, SESSION_MARKER_ALT]:
-        try:
-            os.makedirs(marker_dir, exist_ok=True)
-            marker_path = os.path.join(marker_dir, SESSION_MARKER_FILENAME)
-            Path(marker_path).write_text(session_id, encoding="utf-8")
-        except Exception:
-            pass
+    try:
+        os.makedirs(SESSION_MARKER_DIR, exist_ok=True)
+        marker_path = os.path.join(SESSION_MARKER_DIR, SESSION_MARKER_FILENAME)
+        Path(marker_path).write_text(session_id, encoding="utf-8")
+    except Exception:
+        pass
 
 
 def end_previous_sessions(conn: sqlite3.Connection) -> None:

@@ -25,14 +25,10 @@ SOURCE_INDICATORS = [
 
 ALLOWED_SEARCH_KEYWORDS = [
     "/.agent-flow/",
-    "/.dev-workflow/",
     "/.claude/",
     ".agent-flow/skills/",
     ".agent-flow/wiki/",
-    ".dev-workflow/wiki/",
     ".agent-flow/memory/",
-    ".dev-workflow/skills/",
-    ".dev-workflow/memory/",
     "~/.agent-flow/",
     "~/.claude/",
 ]
@@ -58,7 +54,7 @@ def main() -> None:
     if project_root is None:
         sys.exit(0)
 
-    structure_file = project_root / ".dev-workflow" / "wiki" / "project-structure.md"
+    structure_file = project_root / ".agent-flow" / "wiki" / "project-structure.md"
     if not structure_file.is_file():
         sys.exit(0)
 
@@ -84,7 +80,7 @@ def main() -> None:
         "⛔ 不要重试当前操作！重复同样的操作只会再次被拦截。\n"
         "\n"
         "✅ 解除方法：\n"
-        "  Read .dev-workflow/wiki/project-structure.md\n"
+        "  Read .agent-flow/wiki/project-structure.md\n"
         "  → 找到需求关键词对应的 Tag → 定位到代码目录\n"
         "  → 再在目标目录内搜索具体组件\n"
         "  读取后标记自动创建，后续搜索不再拦截。\n"

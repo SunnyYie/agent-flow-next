@@ -27,7 +27,7 @@ CODE_FILENAMES = {
     "Podfile", "Gemfile", "build.gradle", "settings.gradle",
 }
 
-ALLOWED_PATH_PREFIXES = (".agent-flow", ".dev-workflow", ".claude")
+ALLOWED_PATH_PREFIXES = (".agent-flow", ".claude")
 
 # 代码修改计数文件
 CODE_CHANGE_COUNTER = ".agent-flow/state/.code-change-count"
@@ -89,7 +89,7 @@ def has_code_review_marker() -> bool:
 
 def main():
     # 只在 agent-flow 项目中生效
-    if not os.path.isdir(".agent-flow") and not os.path.isdir(".dev-workflow"):
+    if not os.path.isdir(".agent-flow"):
         sys.exit(0)
 
     # 读取 hook 输入

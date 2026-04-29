@@ -22,7 +22,6 @@ from urllib.parse import urlparse
 
 # 数据库路径：优先项目级，回退全局
 DB_DIR_PROJECT = ".agent-flow"
-DB_DIR_DEV = ".dev-workflow"
 DB_FILENAME = "observations.db"
 
 # 会话标记文件
@@ -100,13 +99,12 @@ END;
 
 
 def get_db_path() -> str:
-    """确定数据库路径：优先 .agent-flow/，回退 .dev-workflow/"""
-    for base in [DB_DIR_PROJECT, DB_DIR_DEV]:
-        db_path = os.path.join(base, DB_FILENAME)
-        if os.path.isdir(base):
-            return db_path
+    """确定数据库路径"""
+    db_path = os.path.join(DB_DIR_PROJECT, DB_FILENAME)
+    if os.path.isdir(DB_DIR_PROJECT):
+        return db_path
     # 默认使用 .agent-flow/
-    return os.path.join(DB_DIR_PROJECT, DB_FILENAME)
+    return db_path
 
 
 def get_connection(db_path: str) -> sqlite3.Connection:
@@ -125,13 +123,12 @@ def get_connection(db_path: str) -> sqlite3.Connection:
 def get_session_id() -> str:
     """获取当前会话 ID（从标记文件读取，或生成新的）"""
     # 检查项目级标记
-    for base in [".agent-flow/state", ".dev-workflow/state"]:
-        marker = os.path.join(base, ".current-session-id")
-        if os.path.isfile(marker):
-            try:
-                return Path(marker).read_text(encoding="utf-8").strip()
-            except Exception:
-                pass
+    marker = os.path.join(".agent-flow/state", ".current-session-id")
+    if os.path.isfile(marker):
+        try:
+            return Path(marker).read_text(encoding="utf-8").strip()
+        except Exception:
+            pass
 
     # 检查全局标记
     global_marker = os.path.expanduser("~/.agent-flow/state/.current-session-id")
@@ -144,14 +141,12 @@ def get_session_id() -> str:
     # 生成新会话 ID
     session_id = datetime.now().strftime("%Y-%m-%d-%H%M%S")
     # 尝试写入标记
-    for base in [".agent-flow/state", ".dev-workflow/state"]:
-        marker = os.path.join(base, ".current-session-id")
-        try:
-            os.makedirs(os.path.dirname(marker), exist_ok=True)
-            Path(marker).write_text(session_id, encoding="utf-8")
-            break
-        except Exception:
-            pass
+    marker = os.path.join(".agent-flow/state", ".current-session-id")
+    try:
+        os.makedirs(os.path.dirname(marker), exist_ok=True)
+        Path(marker).write_text(session_id, encoding="utf-8")
+    except Exception:
+        pass
     return session_id
 
 
@@ -161,15 +156,13 @@ def get_project_dir() -> str:
 
 
 def determine_layer(file_path: str) -> str:
-    """判断文件所属层级：global/project/dev"""
+    """判断文件所属层级：global/project"""
     if not file_path:
         return "project"
     abs_path = os.path.abspath(file_path)
     home = os.path.expanduser("~")
     if abs_path.startswith(os.path.join(home, ".agent-flow")):
         return "global"
-    if ".dev-workflow" in abs_path:
-        return "dev"
     return "project"
 
 

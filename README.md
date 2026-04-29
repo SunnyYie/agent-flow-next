@@ -223,13 +223,11 @@ agent-flow hooks setup-claude
 agent-flow hooks inject-context --target claude-hook
 ```
 
-## 诊断与迁移
+## 诊断
 
 ```bash
 agent-flow doctor
 agent-flow doctor --json
-
-agent-flow migrate-legacy --legacy-project /path/to/legacy --global-source /path/to/global --team-id acme --include-project-knowledge
 ```
 
 ---
@@ -247,7 +245,6 @@ agent-flow migrate-legacy --legacy-project /path/to/legacy --global-source /path
 - `organization-evolution`
 - `mcp-factory`
 - `ops-doctor`
-- `legacy-migration`
 
 ---
 

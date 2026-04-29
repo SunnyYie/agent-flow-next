@@ -27,20 +27,16 @@ class RecallManager:
     def __init__(self, project_dir: Path) -> None:
         self.project_dir = project_dir
         self.recall_dir = project_dir / ".agent-flow" / "wiki" / "recall"
-        self.dev_workflow_recall_dir = project_dir / ".dev-workflow" / "wiki" / "recall"
 
     def _active_recall_dir(self) -> Path:
-        """Return the recall directory that exists (prefer .agent-flow, fallback .dev-workflow).
+        """Return the recall directory, creating it if needed.
 
         Also ensures INDEX.md exists in the active recall directory (lazy creation).
         """
         if self.recall_dir.is_dir():
             ensure_file(self.recall_dir / "INDEX.md", DEFAULT_RECALL_INDEX)
             return self.recall_dir
-        if self.dev_workflow_recall_dir.is_dir():
-            ensure_file(self.dev_workflow_recall_dir / "INDEX.md", DEFAULT_RECALL_INDEX)
-            return self.dev_workflow_recall_dir
-        # Default: create in .agent-flow
+        # Create in .agent-flow
         self.recall_dir.mkdir(parents=True, exist_ok=True)
         ensure_file(self.recall_dir / "INDEX.md", DEFAULT_RECALL_INDEX)
         return self.recall_dir
@@ -138,10 +134,9 @@ class RecallManager:
 
     def _find_db_path(self) -> str | None:
         """Locate the observations.db for this project."""
-        for base in [".agent-flow", ".dev-workflow"]:
-            candidate = self.project_dir / base / "observations.db"
-            if candidate.is_file():
-                return str(candidate)
+        candidate = self.project_dir / ".agent-flow" / "observations.db"
+        if candidate.is_file():
+            return str(candidate)
         return None
 
     def _hydrate_summaries(self, search_results: list[dict], limit: int) -> list[SceneSummary]:

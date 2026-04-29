@@ -16,7 +16,7 @@ When a sub-task claims to be complete, or when quality review / acceptance is ne
 
 ## Required Reading
 
-- `.dev-workflow/Agent.md` — 铁律（特别是铁律1：双验收、非PASS即FAIL）
+- `.agent-flow/Agent.md` — 铁律（特别是铁律1：双验收、非PASS即FAIL）
 - `documents/实施计划.md` — 当前任务的"完成标志"和"测试方法"
 - `documents/设计.md` — 设计规格（用于交叉验证一致性）
 

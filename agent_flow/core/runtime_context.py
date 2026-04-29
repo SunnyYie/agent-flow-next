@@ -816,10 +816,9 @@ def _search_memory_hits(db_path: str, prompt: str) -> list[dict]:
 
 
 def _find_db_path(project_dir: Path) -> str | None:
-    for base in (".agent-flow", ".dev-workflow"):
-        path = project_dir / base / "observations.db"
-        if path.is_file():
-            return str(path)
+    path = project_dir / ".agent-flow" / "observations.db"
+    if path.is_file():
+        return str(path)
     return None
 
 

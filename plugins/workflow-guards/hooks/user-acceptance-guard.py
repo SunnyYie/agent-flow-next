@@ -14,7 +14,7 @@ from pathlib import Path
 def _find_project_root() -> Path | None:
     cwd = Path.cwd()
     for parent in [cwd, *cwd.parents]:
-        if (parent / ".agent-flow").exists() or (parent / ".dev-workflow").exists():
+        if (parent / ".agent-flow").exists():
             return parent
         if parent == Path.home():
             break
@@ -22,22 +22,18 @@ def _find_project_root() -> Path | None:
 
 
 def _read_current_phase(project_root: Path) -> str:
-    for state_dir in [".agent-flow/state", ".dev-workflow/state"]:
-        phase_path = project_root / state_dir / "current_phase.md"
-        if not phase_path.is_file():
-            continue
+    phase_path = project_root / ".agent-flow" / "state" / "current_phase.md"
+    if phase_path.is_file():
         try:
             return phase_path.read_text(encoding="utf-8")
         except OSError:
-            continue
+            pass
     return ""
 
 
 def _get_complexity_level(project_root: Path) -> str:
-    for state_dir in [".agent-flow/state", ".dev-workflow/state"]:
-        path = project_root / state_dir / ".complexity-level"
-        if not path.is_file():
-            continue
+    path = project_root / ".agent-flow" / "state" / ".complexity-level"
+    if path.is_file():
         try:
             for line in path.read_text(encoding="utf-8").splitlines():
                 stripped = line.strip()
@@ -46,7 +42,7 @@ def _get_complexity_level(project_root: Path) -> str:
                     if level in ("simple", "medium", "complex"):
                         return level
         except OSError:
-            continue
+            pass
     return "medium"
 
 
@@ -61,24 +57,22 @@ def _get_complexity_from_phase(phase_content: str) -> str:
 
 
 def _has_user_acceptance_marker(project_root: Path) -> bool:
-    for state_dir in [".agent-flow/state", ".dev-workflow/state"]:
-        marker_path = project_root / state_dir / ".user-acceptance-done"
-        if not marker_path.is_file():
-            continue
-        try:
-            content = marker_path.read_text(encoding="utf-8").strip()
-        except OSError:
-            continue
-        if not content:
-            continue
-        for line in content.splitlines():
-            stripped = line.strip()
-            if "status=accepted" in stripped:
-                return True
-            if stripped.startswith("status:") and "accepted" in stripped:
-                return True
-        return True
-    return False
+    marker_path = project_root / ".agent-flow" / "state" / ".user-acceptance-done"
+    if not marker_path.is_file():
+        return False
+    try:
+        content = marker_path.read_text(encoding="utf-8").strip()
+    except OSError:
+        return False
+    if not content:
+        return False
+    for line in content.splitlines():
+        stripped = line.strip()
+        if "status=accepted" in stripped:
+            return True
+        if stripped.startswith("status:") and "accepted" in stripped:
+            return True
+    return True
 
 
 def _is_past_implement_phase(phase_content: str) -> bool:

@@ -72,19 +72,13 @@ MCP_BASH_SIGNALS = (
 def _find_project_root() -> Path | None:
     cwd = Path.cwd().resolve()
     for candidate in [cwd, *cwd.parents]:
-        if (candidate / ".agent-flow").exists() or (candidate / ".dev-workflow").exists():
+        if (candidate / ".agent-flow").exists():
             return candidate
     return None
 
 
 def _state_marker_path(project_root: Path) -> Path:
-    canonical = project_root / ".agent-flow" / "state" / MARKER_NAME
-    legacy = project_root / ".dev-workflow" / "state" / MARKER_NAME
-    if canonical.is_file():
-        return canonical
-    if legacy.is_file():
-        return legacy
-    return canonical
+    return project_root / ".agent-flow" / "state" / MARKER_NAME
 
 
 def _load_marker_entries(path: Path) -> list[dict[str, str]]:

@@ -4,9 +4,9 @@
 When all sub-tasks in a phase are completed and dual-verified.
 
 ## Required Reading
-- `.dev-workflow/Agent.md` — 铁律和流程
+- `.agent-flow/Agent.md` — 铁律和流程
 - `documents/实施计划.md` — 各任务的完成标志和测试方法
-- `.dev-workflow/state/completed_tasks.md` — 已完成任务记录
+- `.agent-flow/state/completed_tasks.md` — 已完成任务记录
 
 ## Procedure
 
@@ -18,8 +18,8 @@ When all sub-tasks in a phase are completed and dual-verified.
    - No security issues
 3. Generate phase summary
 4. Execute [PHASE-CLEANUP] — 检查并关闭所有残留子Agent
-5. Update `.dev-workflow/state/current_phase.md` and `.dev-workflow/state/completed_tasks.md`
-6. Update `.dev-workflow/logs/dev_log.md`
+5. Update `.agent-flow/state/current_phase.md` and `.agent-flow/state/completed_tasks.md`
+6. Update `.agent-flow/logs/dev_log.md`
 7. Present summary to user
 8. **停止，等待用户确认**
 9. **用户验收确认（v3.0 新增）**

@@ -22,7 +22,7 @@ from pathlib import Path
 def _find_project_root() -> Path | None:
     cwd = Path.cwd()
     for parent in [cwd, *cwd.parents]:
-        if (parent / ".agent-flow").exists() or (parent / ".dev-workflow").exists():
+        if (parent / ".agent-flow").exists():
             return parent
         if parent == Path.home():
             break
@@ -31,30 +31,28 @@ def _find_project_root() -> Path | None:
 
 def _read_current_phase(project_root: Path) -> str:
     """Read current_phase.md content."""
-    for state_dir in [".agent-flow/state", ".dev-workflow/state"]:
-        phase_path = project_root / state_dir / "current_phase.md"
-        if phase_path.is_file():
-            try:
-                return phase_path.read_text(encoding="utf-8")
-            except OSError:
-                pass
+    phase_path = project_root / ".agent-flow/state" / "current_phase.md"
+    if phase_path.is_file():
+        try:
+            return phase_path.read_text(encoding="utf-8")
+        except OSError:
+            pass
     return ""
 
 
 def _get_complexity_level(project_root: Path) -> str:
     """Read complexity level from .complexity-level file."""
-    for state_dir in [".agent-flow/state", ".dev-workflow/state"]:
-        path = project_root / state_dir / ".complexity-level"
-        if path.is_file():
-            try:
-                for line in path.read_text(encoding="utf-8").splitlines():
-                    stripped = line.strip()
-                    if stripped.startswith("level="):
-                        level = stripped.split("=", 1)[1].strip().lower()
-                        if level in ("simple", "medium", "complex"):
-                            return level
-            except OSError:
-                pass
+    path = project_root / ".agent-flow/state" / ".complexity-level"
+    if path.is_file():
+        try:
+            for line in path.read_text(encoding="utf-8").splitlines():
+                stripped = line.strip()
+                if stripped.startswith("level="):
+                    level = stripped.split("=", 1)[1].strip().lower()
+                    if level in ("simple", "medium", "complex"):
+                        return level
+        except OSError:
+            pass
     return "medium"
 
 

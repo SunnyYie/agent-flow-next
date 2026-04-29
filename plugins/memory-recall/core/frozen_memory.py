@@ -149,7 +149,7 @@ class FrozenMemoryManager:
     def _load_skill_triggers(self) -> list[str]:
         """Load skill names from project skill roots, then global skills."""
         skills: list[str] = []
-        for skills_dir in project_skills_dirs(self.project_dir, include_legacy=True):
+        for skills_dir in project_skills_dirs(self.project_dir):
             for skill_dir in sorted(skills_dir.iterdir()):
                 if not skill_dir.is_dir():
                     continue

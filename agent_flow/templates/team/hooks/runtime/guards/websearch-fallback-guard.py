@@ -23,7 +23,6 @@ MAX_AGE_SECONDS = 1800
 def _marker_candidates(project_root, marker_name: str):
     return [
         project_root / ".agent-flow" / "state" / marker_name,
-        project_root / ".dev-workflow" / "state" / marker_name,
     ]
 
 

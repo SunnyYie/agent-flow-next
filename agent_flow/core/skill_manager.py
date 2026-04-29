@@ -3,8 +3,8 @@
 Implements the hermes skill_manage concept: programmatic skill creation,
 editing, patching, and deletion with YAML frontmatter + Markdown format.
 
-Project-level skills live in ``.dev-workflow/skills/`` while ``.agent-flow``
-keeps only mediator indexes. Global skills still live in ``~/.agent-flow``.
+Project-level skills live in ``.agent-flow/skills/``.
+Global skills still live in ``~/.agent-flow``.
 """
 
 from datetime import datetime
@@ -32,7 +32,7 @@ class SkillSpec(BaseModel):
 class SkillManager:
     """CRUD operations for agent-flow skills — hermes skill_manage concept.
 
-    Skills are stored as ``.dev-workflow/skills/{name}/handler.md`` for
+    Skills are stored as ``.agent-flow/skills/{name}/handler.md`` for
     project scope, with YAML frontmatter metadata and Markdown body
     (Trigger, Procedure, Rules).
     """

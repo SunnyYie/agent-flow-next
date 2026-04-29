@@ -33,8 +33,6 @@ VALID_SEARCH_KEYWORDS = [
     "agent-flow/skills",
     "agent-flow/wiki",
     "agent-flow/memory",
-    "dev-workflow/skills",
-    "dev-workflow/wiki",
     "Soul",
     "soul.md",
 ]
@@ -42,13 +40,11 @@ VALID_SEARCH_KEYWORDS = [
 # Skills 搜索路径关键词 — 搜索 skills 时同时创建 subtask-guard 标记
 SKILLS_SEARCH_KEYWORDS = [
     "agent-flow/skills",
-    "dev-workflow/skills",
 ]
 
 # Wiki 搜索路径关键词 — 搜索 wiki 时同时创建 wiki-search 标记
 WIKI_SEARCH_KEYWORDS = [
     "agent-flow/wiki",
-    "dev-workflow/wiki",
 ]
 
 # 这些工具总是视为知识搜索
@@ -146,7 +142,7 @@ def check_tool_wiki_read(tool_name: str, tool_input: dict, critical_tools: list)
 
 def main():
     # 只在 agent-flow 项目中生效
-    if not os.path.isdir(".agent-flow") and not os.path.isdir(".dev-workflow"):
+    if not os.path.isdir(".agent-flow"):
         sys.exit(0)
 
     # 读取 hook 输入

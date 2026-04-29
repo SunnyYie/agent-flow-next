@@ -45,7 +45,7 @@ def main():
         limit = tool_input.get("limit")
 
         # Create .project-structure-read marker when agent reads project-structure.md
-        if file_path and "project-structure.md" in file_path and ".dev-workflow" in file_path:
+        if file_path and "project-structure.md" in file_path and ".agent-flow" in file_path:
             marker_dir = os.path.join(".agent-flow", "state")
             os.makedirs(marker_dir, exist_ok=True)
             marker_path = os.path.join(marker_dir, ".project-structure-read")

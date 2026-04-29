@@ -6,9 +6,9 @@ When implementing features — especially extending existing modules or creating
 
 ## Required Reading
 
-- `.dev-workflow/Agent.md` — 铁律（文档驱动、不做超范围实现）
+- `.agent-flow/Agent.md` — 铁律（文档驱动、不做超范围实现）
 - `documents/设计.md` — 设计规格
-- `.dev-workflow/executor/skills/code_standards.md` — 代码规范
+- `.agent-flow/skills/code_standards.md` — 代码规范
 
 ## Pattern 1: Extend, Don't Overwrite
 

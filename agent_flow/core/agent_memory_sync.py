@@ -100,17 +100,9 @@ class AgentMemorySync:
         agent_skill_dir = (
             self.project_dir / ".agent-flow" / "memory" / agent_name / "skills" / skill_name
         )
-        # Also check .dev-workflow/{agent}/skills/
-        dw_skill_dir = (
-            self.project_dir / ".dev-workflow" / agent_name / "skills" / skill_name
-        )
 
         # Determine source
-        source_dir = None
-        if agent_skill_dir.is_dir():
-            source_dir = agent_skill_dir
-        elif dw_skill_dir.is_dir():
-            source_dir = dw_skill_dir
+        source_dir = agent_skill_dir if agent_skill_dir.is_dir() else None
 
         if source_dir is None:
             raise FileNotFoundError(

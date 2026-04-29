@@ -19,29 +19,21 @@ VALID_SEARCH_KEYWORDS = [
     "agent-flow/skills",
     "agent-flow/wiki",
     "agent-flow/memory",
-    "dev-workflow/skills",
-    "dev-workflow/wiki",
     ".agent-flow/skills",
     ".agent-flow/wiki",
     ".agent-flow/memory",
-    ".dev-workflow/skills",
-    ".dev-workflow/wiki",
     "Soul",
     "soul.md",
 ]
 
 SKILLS_SEARCH_KEYWORDS = [
     "agent-flow/skills",
-    "dev-workflow/skills",
     ".agent-flow/skills",
-    ".dev-workflow/skills",
 ]
 
 WIKI_SEARCH_KEYWORDS = [
     "agent-flow/wiki",
-    "dev-workflow/wiki",
     ".agent-flow/wiki",
-    ".dev-workflow/wiki",
 ]
 
 ALWAYS_SEARCH_TOOLS = {"WebSearch", "Agent", "Skill"}

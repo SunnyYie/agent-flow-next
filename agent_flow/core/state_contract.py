@@ -50,12 +50,10 @@ STRUCTURED_MARKER_FILES = frozenset({
 class StatePaths:
     project_root: Path
     canonical_dir: Path
-    legacy_dir: Path
 
     def candidates(self, filename: str) -> list[Path]:
         return [
             self.canonical_dir / filename,
-            self.legacy_dir / filename,
         ]
 
     def read_path(self, filename: str) -> Path:
@@ -69,10 +67,10 @@ class StatePaths:
 
 
 def find_project_root(start: Path | str | None = None) -> Path | None:
-    """Find the nearest project root containing .agent-flow or .dev-workflow."""
+    """Find the nearest project root containing .agent-flow."""
     current = Path(start or ".").resolve()
     for candidate in [current, *current.parents]:
-        if (candidate / ".agent-flow").exists() or (candidate / ".dev-workflow").exists():
+        if (candidate / ".agent-flow").exists():
             return candidate
     return None
 
@@ -82,7 +80,6 @@ def get_state_paths(project_root: Path | str) -> StatePaths:
     return StatePaths(
         project_root=root,
         canonical_dir=root / ".agent-flow" / "state",
-        legacy_dir=root / ".dev-workflow" / "state",
     )
 
 

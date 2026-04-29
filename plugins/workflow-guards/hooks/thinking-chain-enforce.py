@@ -159,10 +159,8 @@ def _is_allowed_path(file_path: str) -> bool:
     normalized = file_path.replace("\\", "/")
     return (
         normalized.startswith(".agent-flow/")
-        or normalized.startswith(".dev-workflow/")
         or normalized.startswith(".claude/")
         or "/.agent-flow/" in normalized
-        or "/.dev-workflow/" in normalized
         or "/.claude/" in normalized
     )
 

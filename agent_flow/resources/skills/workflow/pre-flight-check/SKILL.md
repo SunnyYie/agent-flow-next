@@ -26,33 +26,27 @@ updated: 2026-04-14
 0. 缓存检查（新增，优先执行）
    ├─ .agent-flow/state/.preflight-cache.md 存在且未过期（<24h）？
    │   ├─ 是 → 读取缓存获取项目配置摘要、Skills索引、Wiki索引
-   │   │        跳过 Agent.md/purpose.md/INDEX.md/SOUL.md 全文读取
+   │   │        跳过 Agent.md/INDEX.md/SOUL.md 全文读取
    │   └─ 否 → 继续常规流程
    └─ 缓存不存在 → 生成缓存（读取所有源文件后提取摘要写入）
 
-1. .dev-workflow/ 是否存在？
-   ├─ 存在 → 读取 .dev-workflow/Agent.md（如缓存命中则只读摘要）
-   └─ 不存在 → 继续检查
+1. .agent-flow/ 是否存在？
+   ├─ 存在 → 读取 .agent-flow/Agent.md（如缓存命中则只读摘要），继续步骤2
+   └─ 不存在 → 停止，提示用户："本项目没有 .agent-flow/，是否要初始化？(agent-flow init)"
+       → 用户拒绝 → 停止，无法继续
 
-2. .agent-flow/ 是否存在？
-   ├─ 存在 → 读取配置继续
-   └─ 不存在 → 停止，询问用户是否初始化
-
-3. .agent-flow/config.yaml 是否有项目上下文？
+2. .agent-flow/config.yaml 是否有项目上下文？
    ├─ tech_stack 为空 → 询问用户补充项目信息
    └─ 有内容 → 继续读取
 
-4. 如 .dev-workflow/ 不存在但 .agent-flow/ 存在：
-   → 提示用户："本项目没有 .dev-workflow/，是否要初始化？(agent-flow init --dev-workflow)"
-   → 用户拒绝 → 继续使用 .agent-flow/ 即 Layer 2
-
-5. Hook/插件就绪检查（新增）：
+3. Hook/插件就绪检查（新增）：
    ├─ `.claude/settings.json` 或 `.claude/settings.local.json` 中是否存在 Agent-flow hooks？
    ├─ 当前任务依赖插件（如 lark-cli、jira-cli）是否可用？
    └─ 缺失时先补齐；`hook-readiness-guard` 会硬阻断代码修改和变更命令
 ```
 
 **缓存失效条件**（任一满足则重新生成）：
+
 - 缓存文件不存在
 - 缓存文件修改时间 > 24 小时
 - 任一源文件（Agent.md/config.yaml/SOUL.md）修改时间 > 缓存修改时间
@@ -73,14 +67,14 @@ updated: 2026-04-14
 
 **各分级对应行为差异**：
 
-| 行为 | Simple | Medium | Complex |
-|------|--------|--------|---------|
-| 知识搜索 | 2步（全局Skills+Wiki） | 5步全做 | 5步+强制WebSearch |
-| GO/NO-GO | 无，用户确认即可 | Plan阶段门控 | 每阶段门控 |
-| 双验收 | 自审即可 | 关键子任务 | 改动量≥50行或3+文件时双验收 |
-| 文档化 | 分析→Memory.md | 分析+计划写入 | 分析+计划+每阶段记录 |
-| 多Agent | 不需要 | 验收时双Agent | 执行+验收都多Agent |
-| Hook行为 | 30min标记，首次软提醒 | 10min，硬阻断 | 5min，硬阻断 |
+| 行为     | Simple                 | Medium        | Complex                     |
+| -------- | ---------------------- | ------------- | --------------------------- |
+| 知识搜索 | 2步（全局Skills+Wiki） | 5步全做       | 5步+强制WebSearch           |
+| GO/NO-GO | 无，用户确认即可       | Plan阶段门控  | 每阶段门控                  |
+| 双验收   | 自审即可               | 关键子任务    | 改动量≥50行或3+文件时双验收 |
+| 文档化   | 分析→Memory.md         | 分析+计划写入 | 分析+计划+每阶段记录        |
+| 多Agent  | 不需要                 | 验收时双Agent | 执行+验收都多Agent          |
+| Hook行为 | 30min标记，首次软提醒  | 10min，硬阻断 | 5min，硬阻断                |
 
 **评估结果写入** `.agent-flow/state/.complexity-level`，hooks 自动读取调整行为。
 
@@ -91,6 +85,7 @@ updated: 2026-04-14
 将任务描述分词，提取关键词，按以下顺序搜索。
 
 **全量搜索（5步，Skills 使用三级查找优化）**：
+
 ```text
 搜索1: Read ~/.agent-flow/skills/topics/{关键词}.md    → Skills 主题枢纽（O(1)）
        或 Grep "{关键词}" ~/.agent-flow/skills/TAG-INDEX.md → Skills 标签索引（O(1)）
@@ -102,11 +97,13 @@ updated: 2026-04-14
 ```
 
 **按复杂度调整搜索深度**：
+
 - Simple: 只做搜索2+5（全局 Skills + 全局 Wiki）
 - Medium: 全部 5 步
 - Complex: 全部 5 步 + 强制 `WebSearch "{任务关键词} best practice"`
 
 **飞书需求文档特殊顺序（新增）**：
+
 - 若输入包含 `feishu.cn/wiki` 或飞书文档线索，必须先完成：
   1. 项目级 wiki/skills 检索
   2. 团队级 wiki/skills 检索
@@ -147,7 +144,7 @@ updated: 2026-04-14
 任务: {任务描述}
 复杂度: {S|M|X}
 RPI阶段: {Research|Plan|Implement}
-项目配置: .agent-flow={有/无} | .dev-workflow={有/无} | config={完整/空}
+项目配置: .agent-flow={有/无} | config={完整/空}
 相关经验: {找到的经验摘要，或"无-需WebSearch"}
 相关技能: {技能名(confidence)，或"无"}
 相关Wiki: {Wiki条目，或"无"}
@@ -169,20 +166,24 @@ RPI阶段: {Research|Plan|Implement}
 ## 复杂度: {S|M|X}
 
 ## RPI 阶段规划
+
 - Research: {已完成/跳过-简单任务/待执行}
 - Plan: {待执行}
 - Implement: {待执行}
 
 ## 实施计划
+
 - T1: {子任务描述}（{有技能:xxx / 需搜索方案 / 需安装工具:xxx}）[{执行方式: Skill内联/Agent独立}]
 - T2: {子任务描述}（{有技能:xxx / 需搜索方案}）[{执行方式}]
 - T3: {子任务描述} ⚠️双验收 [{执行方式}]
 - ...
 
 ## 变更点
+
 - CP1: {核心变更点}
 
 ## 验收标准
+
 - AC1: {验收标准}
 
 模式: {serial|parallel}
@@ -190,6 +191,7 @@ RPI阶段: {Research|Plan|Implement}
 验收点: {标记⚠️的子任务编号}
 
 ## 每个子任务执行前
+
 执行 subtask-guard 技能：搜索 Skill → Soul → Wiki → WebSearch → 选择执行方式
 ```
 

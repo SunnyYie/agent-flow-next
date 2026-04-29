@@ -69,12 +69,9 @@ def _get_connection(db_path: str) -> sqlite3.Connection:
 
 
 def _determine_layer(path: Path, project_dir: Path) -> str:
-    """Determine if a path is global, project, or dev level."""
+    """Determine if a path is global or project level."""
     try:
         rel = path.relative_to(project_dir)
-        parts = rel.parts
-        if parts and parts[0] == ".dev-workflow":
-            return "dev"
         return "project"
     except ValueError:
         # Outside project dir = global
@@ -90,7 +87,7 @@ def index_soul(project_dir: Path, db_path: str) -> int:
 
     # Find Soul.md files
     soul_paths = []
-    for pattern in [".agent-flow/memory/*/Soul.md", ".dev-workflow/memory/*/Soul.md"]:
+    for pattern in [".agent-flow/memory/*/Soul.md"]:
         soul_paths.extend(project_dir.glob(pattern))
 
     # Global Soul.md
@@ -208,7 +205,7 @@ def index_wiki(project_dir: Path, db_path: str) -> int:
     conn = _get_connection(db_path)
     count = 0
 
-    wiki_dirs = [(d, _determine_layer(d, project_dir)) for d in project_wiki_dirs(project_dir, include_legacy=True)]
+    wiki_dirs = [(d, _determine_layer(d, project_dir)) for d in project_wiki_dirs(project_dir)]
 
     # Global wiki
     global_wiki = Path.home() / ".agent-flow" / "wiki"
@@ -282,7 +279,7 @@ def index_recall(project_dir: Path, db_path: str) -> int:
     count = 0
 
     recall_dirs = []
-    for base in [".agent-flow/wiki/recall", ".dev-workflow/wiki/recall"]:
+    for base in [".agent-flow/wiki/recall"]:
         d = project_dir / base
         if d.is_dir():
             recall_dirs.append(d)
@@ -341,7 +338,7 @@ def index_skills(project_dir: Path, db_path: str) -> int:
     conn = _get_connection(db_path)
     count = 0
 
-    skill_dirs = [(d, _determine_layer(d, project_dir)) for d in project_skills_dirs(project_dir, include_legacy=True)]
+    skill_dirs = [(d, _determine_layer(d, project_dir)) for d in project_skills_dirs(project_dir)]
 
     # Global skills
     global_skills = Path.home() / ".agent-flow" / "skills"
@@ -477,13 +474,7 @@ def ensure_index_ready(
     underlying ``get_source_mtimes()`` walk is relatively expensive.
     """
     if db_path is None:
-        for base in [".agent-flow", ".dev-workflow"]:
-            candidate = os.path.join(str(project_dir), base, "observations.db")
-            if os.path.isfile(candidate):
-                db_path = candidate
-                break
-        if db_path is None:
-            db_path = os.path.join(str(project_dir), ".agent-flow", "observations.db")
+        db_path = os.path.join(str(project_dir), ".agent-flow", "observations.db")
 
     cache_path = os.path.join(os.path.dirname(db_path), _MTIME_CACHE_FILENAME)
 
@@ -589,7 +580,7 @@ def get_source_mtimes(project_dir: Path) -> dict[str, str]:
             pass
 
     # Soul.md files
-    for pattern in [".agent-flow/memory/*/Soul.md", ".dev-workflow/memory/*/Soul.md"]:
+    for pattern in [".agent-flow/memory/*/Soul.md"]:
         for p in project_dir.glob(pattern):
             _record(p)
     global_soul = Path.home() / ".agent-flow" / "memory" / "main" / "Soul.md"
@@ -597,7 +588,7 @@ def get_source_mtimes(project_dir: Path) -> dict[str, str]:
         _record(global_soul)
 
     # Wiki files (excluding recall)
-    for wiki_dir in project_wiki_dirs(project_dir, include_legacy=True):
+    for wiki_dir in project_wiki_dirs(project_dir):
         if wiki_dir.is_dir():
             for md_file in wiki_dir.rglob("*.md"):
                 if md_file.name == "INDEX.md":
@@ -615,7 +606,7 @@ def get_source_mtimes(project_dir: Path) -> dict[str, str]:
             _record(md_file)
 
     # Recall files
-    for base in [".agent-flow/wiki/recall", ".dev-workflow/wiki/recall"]:
+    for base in [".agent-flow/wiki/recall"]:
         recall_dir = project_dir / base
         if recall_dir.is_dir():
             for md_file in recall_dir.glob("*.md"):
@@ -624,7 +615,7 @@ def get_source_mtimes(project_dir: Path) -> dict[str, str]:
                 _record(md_file)
 
     # Skill handler.md files
-    for skill_dir in project_skills_dirs(project_dir, include_legacy=True):
+    for skill_dir in project_skills_dirs(project_dir):
         if skill_dir.is_dir():
             for skill_subdir in skill_dir.iterdir():
                 handler = skill_subdir / "handler.md"
@@ -659,13 +650,7 @@ def index_all(project_dir: Path, db_path: str | None = None, *, force_reindex: b
         clear_mtime_scan_cache()
 
     if db_path is None:
-        for base in [".agent-flow", ".dev-workflow"]:
-            candidate = os.path.join(str(project_dir), base, "observations.db")
-            if os.path.isfile(candidate):
-                db_path = candidate
-                break
-        if db_path is None:
-            db_path = os.path.join(str(project_dir), ".agent-flow", "observations.db")
+        db_path = os.path.join(str(project_dir), ".agent-flow", "observations.db")
 
     # --- mtime-based incremental check ---
     cache_path = os.path.join(os.path.dirname(db_path), _MTIME_CACHE_FILENAME)

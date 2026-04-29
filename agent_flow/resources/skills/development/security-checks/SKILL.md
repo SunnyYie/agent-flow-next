@@ -6,7 +6,7 @@ When verifying any sub-task that involves: user input handling, file I/O, subpro
 
 ## Required Reading
 
-- `.dev-workflow/Agent.md` — 铁律（安全最高优先级）
+- `.agent-flow/Agent.md` — 铁律（安全最高优先级）
 - `documents/设计.md` — 第3节安全设计
 
 ## Security Verification Checklist

@@ -14,13 +14,12 @@ from pathlib import Path
 
 
 MARKER_FILE = ".agent-flow/state/.self-questioning-done"
-DEV_WORKFLOW_MARKER = ".dev-workflow/state/.self-questioning-done"
 
 
 def _find_project_root() -> Path | None:
     cwd = Path.cwd()
     for parent in [cwd, *cwd.parents]:
-        if (parent / ".agent-flow").exists() or (parent / ".dev-workflow").exists():
+        if (parent / ".agent-flow").exists():
             return parent
         if parent == Path.home():
             break
@@ -28,14 +27,12 @@ def _find_project_root() -> Path | None:
 
 
 def _read_current_phase(project_root: Path) -> str:
-    for state_dir in [".agent-flow/state", ".dev-workflow/state"]:
-        phase_path = project_root / state_dir / "current_phase.md"
-        if not phase_path.is_file():
-            continue
+    phase_path = project_root / ".agent-flow" / "state" / "current_phase.md"
+    if phase_path.is_file():
         try:
             return phase_path.read_text(encoding="utf-8")
         except OSError:
-            continue
+            pass
     return ""
 
 
@@ -66,15 +63,13 @@ def _is_at_or_past_reflect(phase_content: str) -> bool:
 
 
 def _has_self_questioning_marker(project_root: Path) -> bool:
-    for marker in [MARKER_FILE, DEV_WORKFLOW_MARKER]:
-        marker_path = project_root / marker
-        if not marker_path.is_file():
-            continue
+    marker_path = project_root / MARKER_FILE
+    if marker_path.is_file():
         try:
             if marker_path.read_text(encoding="utf-8").strip():
                 return True
         except OSError:
-            continue
+            pass
     return False
 
 

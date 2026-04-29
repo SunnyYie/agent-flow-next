@@ -6,7 +6,7 @@ Analogous to PipelineManager but for the flow-based workflow:
   - Monitors context budget across agents
   - Supports crash recovery via checkpoint state
 
-The flow-context.yaml file in .agent-flow/state/ (or .dev-workflow/state/)
+The flow-context.yaml file in .agent-flow/state/
 is the single source of truth for flow progress across all agents.
 """
 
@@ -161,7 +161,7 @@ class FlowContextManager:
 
     Provides CRUD operations for tasks, agents, and budget tracking.
     Uses atomic writes (write to .tmp then os.replace) for crash safety.
-    Auto-detects .agent-flow/state/ or .dev-workflow/state/ for compatibility.
+    Auto-detects .agent-flow/state/ for state persistence.
     """
 
     def __init__(self, project_dir: Path) -> None:

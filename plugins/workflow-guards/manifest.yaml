@@ -29,9 +29,6 @@ hooks:
   - path: hooks/hook-readiness-guard.py
     event: PreToolUse
     matcher: "Write|Edit|Bash"
-  - path: hooks/dev-workflow-enforce.py
-    event: PreToolUse
-    matcher: "Write|Edit|Bash"
   - path: hooks/project-structure-enforce.py
     event: PreToolUse
     matcher: "Grep"
@@ -39,6 +36,9 @@ hooks:
     event: PreToolUse
     matcher: "Write|Edit|Bash"
   - path: hooks/subtask-guard-enforce.py
+    event: PreToolUse
+    matcher: "Write|Edit|Bash"
+  - path: hooks/workflow-enforce.py
     event: PreToolUse
     matcher: "Write|Edit|Bash"
   - path: hooks/search-tracker.py

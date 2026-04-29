@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-AgentFlow Dev Workflow Enforcer — PreToolUse hook
+AgentFlow Workflow Enforcer — PreToolUse hook
 强制执行5条开发铁律（即使 pre-flight 完成后也必须遵守）：
 1. 禁止在 main/master/develop 分支上修改代码文件
 2. 禁止没有实施计划文档就修改代码文件
@@ -8,7 +8,7 @@ AgentFlow Dev Workflow Enforcer — PreToolUse hook
 4. 遇到错误禁止自行推测（由 error-search-remind.py 处理）
 5. 连续 Edit/Write 超过 2 次且无间隔搜索时，强制执行 subtask-guard
 
-仅在有 .agent-flow/ 或 .dev-workflow/ 的项目中生效。
+仅在有 .agent-flow/ 的项目中生效。
 仅在 pre-flight 完成后（current_phase.md 存在）才执行检查。
 """
 import json
@@ -65,7 +65,7 @@ PLAN_MARKERS = [
 ]
 
 # 允许写入的路径前缀（不受分支和计划限制）
-ALLOWED_PATH_PREFIXES = (".agent-flow", ".dev-workflow", ".claude")
+ALLOWED_PATH_PREFIXES = (".agent-flow", ".claude")
 
 # 深度澄清和设计决策标记文件（v3.0 新增）
 REQUIREMENT_CLARIFIED_MARKER = ".agent-flow/state/.requirement-clarified"
@@ -145,10 +145,9 @@ def has_implementation_plan(project_root) -> tuple[bool, bool]:
     ]
     for pf in plan_files:
         if os.path.isfile(os.path.join(state_dir, pf)):
-            return True
+            return True, False
 
     # 检查 current_phase.md 中是否包含计划章节
-    # 同时检查两个可能的路径
     phase_file = read_state_path(project_root, "current_phase.md")
     if os.path.isfile(phase_file):
         try:
@@ -175,7 +174,6 @@ def main():
         sys.exit(0)
 
     # 只在 pre-flight 完成后执行（preflight-enforce.py 处理 pre-flight 前的阶段）
-    # 同时检查两个路径
     phase_file = read_state_path(project_root, "current_phase.md")
     phase_found = os.path.isfile(phase_file) and os.path.getsize(phase_file) > 10
     if not phase_found:
@@ -369,7 +367,7 @@ def main():
             search_param = tool_input.get("file_path", "")
         valid_keywords = [
             "agent-flow/skills", "agent-flow/wiki", "agent-flow/memory",
-            "dev-workflow/skills", "dev-workflow/wiki", "Soul", "soul.md",
+            "Soul", "soul.md",
         ]
         return any(kw in search_param for kw in valid_keywords)
 

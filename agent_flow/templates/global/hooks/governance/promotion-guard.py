@@ -21,8 +21,8 @@ GUARDED_SUBDIRS = ["wiki", "skills"]
 
 # 需要守卫的项目级文档
 PROJECT_GUARDED_FILES = [
-    "project-structure.md",  # .dev-workflow/wiki/ 下
-    "Agent.md",              # .dev-workflow/ 下
+    "project-structure.md",  # .agent-flow/wiki/ 下
+    "Agent.md",  # .agent-flow/ 下
 ]
 
 # 项目级文档验收标记文件
@@ -40,7 +40,9 @@ def is_guarded_path(file_path: str) -> bool:
     normalized = os.path.normpath(os.path.abspath(file_path))
     for subdir in GUARDED_SUBDIRS:
         guarded_prefix = os.path.normpath(os.path.join(GLOBAL_AGENT_FLOW, subdir))
-        if normalized.startswith(guarded_prefix + os.sep) or normalized.startswith(guarded_prefix + "/"):
+        if normalized.startswith(guarded_prefix + os.sep) or normalized.startswith(
+            guarded_prefix + "/"
+        ):
             return True
     return False
 
@@ -50,8 +52,8 @@ def is_project_doc_path(file_path: str) -> bool:
     normalized = os.path.normpath(file_path)
     for guarded_name in PROJECT_GUARDED_FILES:
         if normalized.endswith(guarded_name):
-            # 确认在 .dev-workflow/ 下
-            if ".dev-workflow" in normalized:
+            # 确认在 .agent-flow/ 下
+            if ".agent-flow" in normalized:
                 return True
     return False
 
@@ -79,7 +81,9 @@ def remove_project_doc_verified_path(file_path: str):
         normalized = os.path.normpath(os.path.abspath(file_path))
         with open(PROJECT_VERIFICATION_MARKER, "r", encoding="utf-8") as f:
             paths = [line.strip() for line in f if line.strip()]
-        remaining = [p for p in paths if os.path.normpath(os.path.abspath(p)) != normalized]
+        remaining = [
+            p for p in paths if os.path.normpath(os.path.abspath(p)) != normalized
+        ]
         with open(PROJECT_VERIFICATION_MARKER, "w", encoding="utf-8") as f:
             f.write("\n".join(remaining) + "\n" if remaining else "")
     except Exception:
@@ -150,15 +154,69 @@ def extract_keywords(text: str) -> set:
     words = re.findall(r"[a-zA-Z]{3,}|[\u4e00-\u9fff]{2,}", text.lower())
     # 英文停用词
     stop_words = {
-        "the", "and", "for", "are", "but", "not", "you", "all",
-        "can", "had", "her", "was", "one", "our", "out", "has",
-        "how", "its", "let", "may", "new", "now", "old", "see",
-        "way", "who", "did", "get", "got", "use", "used", "using",
-        "this", "that", "with", "from", "they", "been", "have",
-        "will", "each", "make", "like", "into", "them", "than",
-        "then", "also", "more", "very", "much", "some", "when",
-        "what", "which", "about", "would", "could", "should",
-        "pattern", "pitfall", "concept", "workflow",
+        "the",
+        "and",
+        "for",
+        "are",
+        "but",
+        "not",
+        "you",
+        "all",
+        "can",
+        "had",
+        "her",
+        "was",
+        "one",
+        "our",
+        "out",
+        "has",
+        "how",
+        "its",
+        "let",
+        "may",
+        "new",
+        "now",
+        "old",
+        "see",
+        "way",
+        "who",
+        "did",
+        "get",
+        "got",
+        "use",
+        "used",
+        "using",
+        "this",
+        "that",
+        "with",
+        "from",
+        "they",
+        "been",
+        "have",
+        "will",
+        "each",
+        "make",
+        "like",
+        "into",
+        "them",
+        "than",
+        "then",
+        "also",
+        "more",
+        "very",
+        "much",
+        "some",
+        "when",
+        "what",
+        "which",
+        "about",
+        "would",
+        "could",
+        "should",
+        "pattern",
+        "pitfall",
+        "concept",
+        "workflow",
     }
     return {w for w in words if w not in stop_words}
 
@@ -172,7 +230,9 @@ def compute_similarity(keywords1: set, keywords2: set) -> float:
     return len(intersection) / len(union) if union else 0.0
 
 
-def find_similar_files(target_dir: str, new_title: str, new_name: str, new_content: str) -> list:
+def find_similar_files(
+    target_dir: str, new_title: str, new_name: str, new_content: str
+) -> list:
     """在目标目录中查找与新内容相似的已有文件
 
     返回: [(文件路径, 相似度, 标题/名称), ...] 按相似度降序
@@ -204,12 +264,13 @@ def find_similar_files(target_dir: str, new_title: str, new_name: str, new_conte
             existing_name = extract_name_from_frontmatter(existing_content)
 
             # 文件名关键词
-            fname_keywords = extract_keywords(fname.replace("-", " ").replace("_", " ").replace(".md", ""))
+            fname_keywords = extract_keywords(
+                fname.replace("-", " ").replace("_", " ").replace(".md", "")
+            )
 
             # 合并已有文件的所有关键词
             existing_keywords = (
-                extract_keywords(f"{existing_title} {existing_name}")
-                | fname_keywords
+                extract_keywords(f"{existing_title} {existing_name}") | fname_keywords
             )
 
             sim = compute_similarity(new_keywords, existing_keywords)
@@ -217,7 +278,10 @@ def find_similar_files(target_dir: str, new_title: str, new_name: str, new_conte
             # 也检查标题的子串匹配
             if new_title and existing_title:
                 # 标题完全包含
-                if new_title.lower() in existing_title.lower() or existing_title.lower() in new_title.lower():
+                if (
+                    new_title.lower() in existing_title.lower()
+                    or existing_title.lower() in new_title.lower()
+                ):
                     sim = max(sim, 0.6)
 
             if sim >= SIMILARITY_THRESHOLD:
@@ -252,7 +316,11 @@ def remove_verified_path(target_path: str):
         with open(VERIFICATION_MARKER, "r", encoding="utf-8") as f:
             verified_paths = [line.strip() for line in f if line.strip()]
         normalized_target = os.path.normpath(os.path.abspath(target_path))
-        remaining = [vp for vp in verified_paths if os.path.normpath(os.path.abspath(vp)) != normalized_target]
+        remaining = [
+            vp
+            for vp in verified_paths
+            if os.path.normpath(os.path.abspath(vp)) != normalized_target
+        ]
         with open(VERIFICATION_MARKER, "w", encoding="utf-8") as f:
             f.write("\n".join(remaining) + "\n" if remaining else "")
     except Exception:
@@ -314,7 +382,7 @@ def main():
                         f"⛔ 不要重试当前操作！重复同样的操作只会再次被拦截。\n\n"
                         f"✅ 解除方法：\n"
                         f"  先读取现有内容，确认标签不存在后再添加\n"
-                        f"  如需重新生成完整索引: agent-flow init --dev-workflow --force\n"
+                        f"  如需重新生成完整索引: agent-flow init --force\n"
                         f"  完成后，当前操作会自动放行。"
                     )
                     sys.exit(2)
@@ -325,7 +393,7 @@ def main():
             f"如果是标签更新，请确认:\n"
             f"1. 标签不与已有条目重复\n"
             f"2. 目录路径正确\n"
-            f"3. 更新后运行 agent-flow init --dev-workflow --force 可重新生成"
+            f"3. 更新后运行 agent-flow init --force 可重新生成"
         )
         sys.exit(0)
 
@@ -355,7 +423,12 @@ def main():
 
     # 从文件路径提取名称作为 fallback
     if not new_title and not new_name:
-        basename = os.path.basename(file_path).replace(".md", "").replace("-", " ").replace("_", " ")
+        basename = (
+            os.path.basename(file_path)
+            .replace(".md", "")
+            .replace("-", " ")
+            .replace("_", " ")
+        )
         new_title = basename
         new_name = basename
 
@@ -364,7 +437,9 @@ def main():
     target_dir = None
     for subdir in GUARDED_SUBDIRS:
         guarded_prefix = os.path.normpath(os.path.join(GLOBAL_AGENT_FLOW, subdir))
-        if normalized_path.startswith(guarded_prefix + os.sep) or normalized_path.startswith(guarded_prefix + "/"):
+        if normalized_path.startswith(
+            guarded_prefix + os.sep
+        ) or normalized_path.startswith(guarded_prefix + "/"):
             target_dir = guarded_prefix
             break
     if not target_dir:
@@ -377,8 +452,7 @@ def main():
         if similar:
             top = similar[0]
             similar_list = "\n".join(
-                f"  - {s[2]} (相似度: {s[1]:.0%}) → {s[0]}"
-                for s in similar[:3]
+                f"  - {s[2]} (相似度: {s[1]:.0%}) → {s[0]}" for s in similar[:3]
             )
             print(
                 f"[AgentFlow BLOCKED] 全局知识库中已有相似内容，禁止重复创建！\n"

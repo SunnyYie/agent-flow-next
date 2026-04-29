@@ -86,7 +86,7 @@ hooks:
 
 ### Plugin Directory (plugins/)
 
-12 built-in plugins, each self-contained with `manifest.yaml`, `commands/`, and optionally `hooks/` and `core/`:
+11 built-in plugins, each self-contained with `manifest.yaml`, `commands/`, and optionally `hooks/` and `core/`:
 
 | Plugin | Purpose |
 |--------|---------|
@@ -101,7 +101,6 @@ hooks:
 | organization-evolution | Asset promotion, decay, reflection |
 | mcp-factory | MCP tool factory guard and commands |
 | ops-doctor | Health diagnostics |
-| legacy-migration | Migration from old `.dev-workflow/` structure |
 
 ### Template System (agent_flow/templates/)
 
