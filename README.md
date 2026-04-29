@@ -1,10 +1,11 @@
 # AgentFlow Next
 
-AgentFlow Next 是一个“核心最小化 + 插件扩展”的多层工作流 CLI。
+AgentFlow Next 是一个"核心最小化 + 插件扩展"的多层工作流 CLI。
 
 - 核心只负责：初始化、插件系统、动态命令加载
 - 业务能力由插件提供：pipeline、agent、memory、team、promote、runtime 等
 - 三层作用域：`global / team / project`
+- 资源类型：skill、wiki、reference、tool、hook、soul
 
 ---
 
@@ -41,6 +42,14 @@ agent-flow init --team --team-id acme
 ```bash
 export AGENT_FLOW_TEAM_ROOT=/path/to/team-root
 agent-flow init --team --team-id acme
+```
+
+Team 初始化支持 hooks profile：
+- `minimal`（默认）：仅安装必要的 guard hooks
+- `full`：安装全部 hooks（guards + enforcers + reminders + trackers）
+
+```bash
+agent-flow init --team --team-id acme --hooks-profile full
 ```
 
 ### 4. 初始化 Project（项目级）
@@ -178,6 +187,9 @@ agent-flow asset create --kind wiki --name concepts/new-doc --layer project
 agent-flow promote submit --kind skill --name demo --from-layer project --to-layer team --team-id acme --source-path <path>
 agent-flow promote review <proposal_id> --reviewer alice --role maintainer --decision approved --summary "ok"
 agent-flow promote finalize <proposal_id>
+
+agent-flow organize
+agent-flow organize --dry-run
 ```
 
 ## Pipeline 工作流
@@ -223,6 +235,12 @@ agent-flow hooks setup-claude
 agent-flow hooks inject-context --target claude-hook
 ```
 
+## MCP 工厂
+
+```bash
+agent-flow mcp-factory --help
+```
+
 ## 诊断
 
 ```bash
@@ -234,17 +252,19 @@ agent-flow doctor --json
 
 ## 当前内置插件
 
-- `workflow-pipeline`
-- `workflow-guards`
-- `agent-orchestration`
-- `memory-recall`
-- `user-profile`
-- `hermes-skillops`
-- `runtime-adapters`
-- `team-collaboration`
-- `organization-evolution`
-- `mcp-factory`
-- `ops-doctor`
+| 插件 | 命名空间 | 命令 | Hooks | 说明 |
+|------|---------|------|-------|------|
+| workflow-pipeline | pipeline | pipeline, plan-review, plan-eng-review, add-feature, run, review, qa, ship | — | Pipeline 工作流阶段 |
+| workflow-guards | workflow-guards | — | 16 个 (guards, enforcers, reminders, trackers) | 运行时执行器 |
+| agent-orchestration | agent-orchestration | agent | — | 多 Agent 调度与结构化状态 |
+| memory-recall | memory-recall | memory, recall | — | 记忆索引、压缩、召回、生命周期 |
+| user-profile | user-profile | user | — | 用户模型与自主权设置 |
+| hermes-skillops | hermes-skillops | hermes, skill | — | 技能管理与演进 |
+| runtime-adapters | runtime-adapters | hooks, adapt | — | 平台运行时适配 |
+| team-collaboration | team-collaboration | team, bind-team, init-team-flow | — | 团队绑定与同步 |
+| organization-evolution | organization-evolution | asset, promote, organize | — | 资产晋升、衰减、反思 |
+| mcp-factory | mcp-factory | mcp-factory | 2 个 guards | MCP 工具工厂 |
+| ops-doctor | ops-doctor | doctor | — | 健康诊断 |
 
 ---
 
@@ -274,3 +294,4 @@ agent-flow doctor --json
 - scope 隔离，按优先级覆盖
 - 配置可审计，状态可回放
 - 兼容迁移，逐步替换旧 CLI 能力
+- Team hooks 支持 minimal/full profile，按需安装
