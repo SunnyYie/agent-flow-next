@@ -37,6 +37,8 @@
 ## Pitfalls（踩坑）
 
 - `pitfalls/workflow/skip-implementation-plan.md`
+- `pitfalls/workflow/hook-project-root-mismatch.md` — monorepo 子包 .agent-flow 优先于仓库根，导致 hook 误判
+- `pitfalls/workflow/hook-stderr-silent-block.md` — Hook 阻断时只显示 "No stderr output"，无法定位原因
 - `pitfalls/environment/lark-cli-login-shell-path-mismatch.md`
 - `pitfalls/llm-coding/overcomplication.md`
 - `pitfalls/llm-coding/drive-by-refactoring.md`
