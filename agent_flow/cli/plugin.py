@@ -9,7 +9,14 @@ from agent_flow.core.claude_settings import (
     plugin_settings_path,
 )
 from agent_flow.core.config import project_team_id
-from agent_flow.core.plugin import install_plugin, list_plugins, set_plugin_enabled, uninstall_plugin
+from agent_flow.core.plugin import (
+    install_plugin,
+    list_plugins,
+    set_plugin_enabled,
+    uninstall_plugin,
+    update_plugin,
+    update_plugins_in_scope,
+)
 from agent_flow.core.plugin_registry import PluginScope
 
 
@@ -61,6 +68,70 @@ def plugin_uninstall_cmd(name: str, scope_name: str, team_id: str) -> None:
 
     uninstall_plugin(name, scope=scope, project_dir=project_dir, team_id=resolved_team_id)
     click.echo(f"uninstalled {name} from {scope.value}")
+
+
+@plugin_group.command("update")
+@click.argument("name", required=False)
+@click.option("--scope", "scope_name", type=_SCOPE_CHOICES, required=True)
+@click.option("--source", default="", help="Optional source override: local:<path> or builtin:<name>")
+@click.option("--all", "update_all", is_flag=True, help="Update all plugins in the selected scope")
+@click.option("--only-outdated", is_flag=True, help="With --all, update only plugins whose source version changed")
+@click.option("--team-id", default="", help="Team id for team scope")
+def plugin_update_cmd(
+    name: str,
+    scope_name: str,
+    source: str,
+    update_all: bool,
+    only_outdated: bool,
+    team_id: str,
+) -> None:
+    scope = PluginScope(scope_name)
+    project_dir = Path.cwd()
+    resolved_team_id = _resolve_team_id(scope, team_id, project_dir)
+
+    if update_all and name:
+        raise click.ClickException("do not pass plugin name with --all")
+    if not update_all and not name:
+        raise click.ClickException("plugin name is required unless --all is set")
+    if update_all and source.strip():
+        raise click.ClickException("--source is not supported with --all")
+    if only_outdated and not update_all:
+        raise click.ClickException("--only-outdated requires --all")
+
+    if update_all:
+        results = update_plugins_in_scope(
+            scope=scope,
+            project_dir=project_dir,
+            team_id=resolved_team_id,
+            only_outdated=only_outdated,
+        )
+        if not results:
+            if only_outdated:
+                click.echo(f"no outdated plugins to update in {scope.value} scope")
+            else:
+                click.echo(f"no plugins to update in {scope.value} scope")
+            return
+        for plugin_name, before_version, after_version in results:
+            click.echo(f"updated {plugin_name} {before_version} -> {after_version} scope={scope.value}")
+        return
+
+    assert name is not None
+    before = list_plugins(project_dir=project_dir, team_id=resolved_team_id, scope=scope).get(name)
+    if before is None:
+        raise click.ClickException(f"plugin not found in {scope.value} scope: {name}")
+
+    try:
+        after = update_plugin(
+            name,
+            scope=scope,
+            source=source,
+            project_dir=project_dir,
+            team_id=resolved_team_id,
+        )
+    except KeyError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    click.echo(f"updated {name} {before.version} -> {after.version} scope={scope.value}")
 
 
 @plugin_group.command("enable")

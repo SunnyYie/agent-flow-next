@@ -72,6 +72,22 @@ def _parse_source_spec(source: str, plugin_name: str, *, project_dir: Path) -> t
     return source_type, location, source_path
 
 
+def _effective_source_for_record(record: PluginRecord) -> str:
+    source_type = record.source.get("type", "").strip() or "builtin"
+    source_location = record.source.get("location", "").strip() or record.name
+    return f"{source_type}:{source_location}"
+
+
+def _source_manifest_version(record: PluginRecord, *, project_dir: Path) -> str:
+    _source_type, _source_location, source_path = _parse_source_spec(
+        _effective_source_for_record(record),
+        record.name,
+        project_dir=project_dir,
+    )
+    manifest = load_plugin_manifest(source_path / "manifest.yaml")
+    return manifest.version
+
+
 def install_plugin(
     plugin_name: str,
     *,
@@ -117,6 +133,92 @@ def install_plugin(
     PluginRegistry.upsert_record(scope, record, project_dir=project_dir, team_id=team_id)
     _sync_effective_plugin_hooks(project_dir=project_dir, team_id=team_id)
     return record
+
+
+def update_plugin(
+    plugin_name: str,
+    *,
+    scope: PluginScope,
+    project_dir: Path,
+    team_id: str = "",
+    source: str = "",
+) -> PluginRecord:
+    records = PluginRegistry.load_scope(scope, project_dir=project_dir, team_id=team_id)
+    current = records.get(plugin_name)
+    if current is None:
+        raise KeyError(f"plugin not found in {scope.value} scope: {plugin_name}")
+
+    if source.strip():
+        effective_source = source.strip()
+    else:
+        effective_source = _effective_source_for_record(current)
+
+    source_type, source_location, source_path = _parse_source_spec(effective_source, plugin_name, project_dir=project_dir)
+
+    install_root = _install_root(scope, project_dir=project_dir, team_id=team_id)
+    install_root.mkdir(parents=True, exist_ok=True)
+    plugin_dir = install_root / plugin_name
+
+    if plugin_dir.exists():
+        shutil.rmtree(plugin_dir)
+    shutil.copytree(source_path, plugin_dir)
+
+    manifest = load_plugin_manifest(plugin_dir / "manifest.yaml")
+    if manifest.name != plugin_name:
+        raise ValueError(
+            f"plugin name mismatch: expected '{plugin_name}', got '{manifest.name}' from {plugin_dir / 'manifest.yaml'}"
+        )
+
+    hook_registrations = [
+        HookRegistration(
+            event=hook.event,
+            matcher=hook.matcher,
+            command=f"python3 {plugin_dir / hook.path}",
+        )
+        for hook in manifest.hooks
+    ]
+
+    updated = PluginRecord(
+        name=plugin_name,
+        version=manifest.version,
+        enabled=current.enabled,
+        install_path=str(plugin_dir),
+        source={"type": source_type, "location": source_location, "ref": ""},
+        installed_at=current.installed_at,
+        rollback_version=current.version,
+        previous_source=current.source or None,
+        hook_registrations=hook_registrations,
+        scope=scope,
+    )
+    PluginRegistry.upsert_record(scope, updated, project_dir=project_dir, team_id=team_id)
+    _sync_effective_plugin_hooks(project_dir=project_dir, team_id=team_id)
+    return updated
+
+
+def update_plugins_in_scope(
+    *,
+    scope: PluginScope,
+    project_dir: Path,
+    team_id: str = "",
+    only_outdated: bool = False,
+) -> list[tuple[str, str, str]]:
+    records = PluginRegistry.load_scope(scope, project_dir=project_dir, team_id=team_id)
+    results: list[tuple[str, str, str]] = []
+    for plugin_name in sorted(records):
+        before = records[plugin_name]
+        if only_outdated:
+            source_version = _source_manifest_version(before, project_dir=project_dir)
+            if source_version == before.version:
+                continue
+        after = update_plugin(
+            plugin_name,
+            scope=scope,
+            project_dir=project_dir,
+            team_id=team_id,
+            source="",
+        )
+        results.append((plugin_name, before.version, after.version))
+    return results
 
 
 def set_plugin_enabled(

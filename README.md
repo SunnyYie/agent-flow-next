@@ -131,18 +131,32 @@ agent-flow plugin enable workflow-pipeline --scope project
 agent-flow plugin uninstall workflow-pipeline --scope project
 ```
 
-## 更新插件（当前版本）
+## 更新插件
 
-当前 CLI 还没有独立 `plugin update` 子命令。推荐更新流程：
+支持独立 `plugin update` 子命令，会重装插件并同步 hooks 到项目 `.claude/settings.local.json`。
 
-1. `plugin uninstall`
-2. `plugin install`（重新安装目标版本/来源）
-
-例如：
+例如（沿用当前安装记录的 source）：
 
 ```bash
-agent-flow plugin uninstall workflow-pipeline --scope project
-agent-flow plugin install workflow-pipeline --scope project --source builtin:workflow-pipeline
+agent-flow plugin update workflow-pipeline --scope project
+```
+
+也可以显式覆盖 source：
+
+```bash
+agent-flow plugin update workflow-pipeline --scope project --source builtin:workflow-pipeline
+```
+
+批量升级当前 scope 下全部已安装插件：
+
+```bash
+agent-flow plugin update --scope project --all
+```
+
+只升级版本发生变化（outdated）的插件：
+
+```bash
+agent-flow plugin update --scope project --all --only-outdated
 ```
 
 ## 查看插件列表
