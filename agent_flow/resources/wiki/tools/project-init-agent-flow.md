@@ -18,7 +18,8 @@ tags: [agent-flow, init, project, settings.local.json, plugin-hooks]
 1. 使用agent-flow CLI初始化.agent-flow（project scope）
 2. 安装需要的插件（可选，但推荐至少安装 workflow-guards、workflow-pipeline、mcp-factory 等核心插件）
 3. 将插件 hooks 同步到 `.claude/settings.local.json`
-4. 验证 hooks 与 effective plugins 一致
+4. 注册 Agent-flow skills 到 Claude/Codex 运行时目录
+5. 验证 hooks 与 effective plugins 一致
 
 ## 标准步骤
 
@@ -34,6 +35,9 @@ agent-flow plugin list
 
 # 4) 验证 hooks 是否正确注册
 agent-flow plugin verify
+
+# 5) 检查 skills 注册（Claude/Codex）
+ls -la .claude/skills .agents/skills
 ```
 
 ## 安装指定插件（示例）
@@ -45,6 +49,18 @@ agent-flow plugin install mcp-factory --scope project --source builtin:mcp-facto
 ```
 
 安装/启用/禁用/卸载插件后，都会触发项目 hooks 重同步。
+
+## Skill 注册结果位置
+
+- Claude Code 运行时 skills：`.claude/skills/agent-flow-*`
+- Codex 运行时 skills：`.agents/skills/agent-flow-*`
+- 注册状态清单：`.agent-flow/state/skill-registrations.json`
+
+默认会注册三层来源（按存在性）：
+
+- `agent-flow-project` -> `.agent-flow/skills`
+- `agent-flow-team` -> `<team_root>/.agent-flow/skills`（仅绑定团队后）
+- `agent-flow-global` -> 全局或 bundled skills
 
 ## 注册结果位置
 
@@ -74,4 +90,3 @@ agent-flow plugin verify
 
 2. 项目没有 `.claude/settings.local.json`
    通常是还未安装任一含 hooks 的插件；先 `plugin install` 后再 `plugin verify`。
-

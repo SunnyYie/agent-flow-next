@@ -18,6 +18,13 @@ def run_doctor(project_dir: Path, global_root: Path, team_root: Path | None = No
     if project_root.exists() and not (project_root / "config.yaml").exists():
         issues.append("Missing project config.yaml")
 
+    claude_skill_link = Path(project_dir) / ".claude" / "skills" / "agent-flow-project"
+    codex_skill_link = Path(project_dir) / ".agents" / "skills" / "agent-flow-project"
+    if not claude_skill_link.exists():
+        issues.append("Missing Claude runtime skill registration: .claude/skills/agent-flow-project")
+    if not codex_skill_link.exists():
+        issues.append("Missing Codex runtime skill registration: .agents/skills/agent-flow-project")
+
     # Shadow warning on governance hooks in project when team/global already has the same key.
     pgov = (project_root / "hooks" / "governance") if project_root.exists() else None
     if pgov and pgov.exists():

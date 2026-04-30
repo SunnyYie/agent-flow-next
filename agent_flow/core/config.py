@@ -4,6 +4,7 @@ import json
 import os
 import shutil
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import yaml
@@ -968,6 +969,88 @@ def _write_project_protocol_docs(project_dir: Path, project_name: str, global_ro
     ensure_file(agents_path, agents_content)
 
 
+def _resolve_skills_registration_sources(
+    *,
+    project_root: Path,
+    global_root: Path,
+    team_root: Path | None,
+) -> dict[str, Path]:
+    sources: dict[str, Path] = {
+        "project": project_root / "skills",
+    }
+    if team_root and (team_root / "skills").exists():
+        sources["team"] = team_root / "skills"
+
+    global_skills = global_root / "skills"
+    if not _has_files(global_skills):
+        bundled_skills = bundled_resources_root() / "skills"
+        if _has_files(bundled_skills):
+            global_skills = bundled_skills
+    if global_skills.exists():
+        sources["global"] = global_skills
+    return sources
+
+
+def _ensure_registration_link(link_path: Path, target_path: Path) -> None:
+    link_path.parent.mkdir(parents=True, exist_ok=True)
+    if link_path.is_symlink():
+        try:
+            if link_path.resolve() == target_path.resolve():
+                return
+        except OSError:
+            pass
+        link_path.unlink()
+    elif link_path.exists():
+        if link_path.is_dir():
+            shutil.rmtree(link_path)
+        else:
+            link_path.unlink()
+
+    try:
+        link_path.symlink_to(target_path, target_is_directory=True)
+    except OSError:
+        shutil.copytree(target_path, link_path, dirs_exist_ok=True)
+
+
+def _sync_runtime_skill_registrations(
+    *,
+    project_dir: Path,
+    project_root: Path,
+    global_root: Path,
+    team_root: Path | None,
+) -> None:
+    sources = _resolve_skills_registration_sources(
+        project_root=project_root,
+        global_root=global_root,
+        team_root=team_root,
+    )
+    runtime_roots = [
+        Path(project_dir) / ".claude" / "skills",
+        Path(project_dir) / ".agents" / "skills",
+    ]
+
+    registered: dict[str, dict[str, str]] = {}
+    for runtime_root in runtime_roots:
+        runtime_root.mkdir(parents=True, exist_ok=True)
+        runtime_label = str(runtime_root.relative_to(Path(project_dir)))
+        registered[runtime_label] = {}
+        for layer, source_root in sources.items():
+            link_name = f"agent-flow-{layer}"
+            link_path = runtime_root / link_name
+            _ensure_registration_link(link_path, source_root)
+            registered[runtime_label][layer] = str(link_path)
+
+    state_path = project_root / "state" / "skill-registrations.json"
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "schema_version": 1,
+        "registered_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+        "sources": {k: str(v) for k, v in sources.items()},
+        "runtime_links": registered,
+    }
+    state_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
 def init_project(project_dir: Path) -> Path:
     root = _ensure_layout(layer_root("project", project_dir=project_dir), PROJECT_DEFAULT_DIRS)
     _prune_non_project_hook_scenes(project_root=root)
@@ -989,6 +1072,12 @@ def init_project(project_dir: Path) -> Path:
     _write_project_index_docs(root, global_root=global_root, team_root=team_root)
     _write_project_readme(root, cfg.name)
     _write_project_protocol_docs(project_dir=Path(project_dir), project_name=cfg.name, global_root=global_root)
+    _sync_runtime_skill_registrations(
+        project_dir=Path(project_dir),
+        project_root=root,
+        global_root=global_root,
+        team_root=team_root,
+    )
     ensure_request_scaffolds(Path(project_dir), cfg.name)
     return root
 
@@ -1005,6 +1094,12 @@ def bind_project_team(project_dir: Path, team_id: str) -> Path:
     global_root = layer_root("global", project_dir=project_dir)
     team_root = layer_root("team", team_id=team_id, project_dir=project_dir)
     _write_project_index_docs(root, global_root=global_root, team_root=team_root)
+    _sync_runtime_skill_registrations(
+        project_dir=Path(project_dir),
+        project_root=root,
+        global_root=global_root,
+        team_root=team_root,
+    )
     return config_path
 
 
