@@ -45,8 +45,29 @@
 
 - 将 `.agent-flow` 使用规则、优先级与入口文档关联到 `CLAUDE.md`/`AGENTS.md`
 
+### 1.5 2026-04-30 新增更新（必须执行）
+
+- 老项目初始化后，额外执行一次升级同步：
+
+```bash
+agent-flow plugin update --scope project --all --only-outdated
+agent-flow plugin verify
+agent-flow doctor --json
+```
+
+- 验证 skills 运行时注册：
+
+```bash
+ls -la .claude/skills .agents/skills
+```
+
+- 必须存在：
+  - `.claude/skills/agent-flow-project`
+  - `.agents/skills/agent-flow-project`
+  - `.agent-flow/state/skill-registrations.json`
+
 **阶段门控点 G1（可选停）**
-- 条件：初始化、模板、Hook、插件全部就绪
+- 条件：初始化、模板、Hook、插件、skills 注册全部就绪
 
 ---
 
@@ -165,6 +186,26 @@
 
 - 监督 SubAgent更新 Jira 进度与备注，保持可追溯
 
+### 3.6 2026-04-30 新增更新（Hook 阻断排障）
+
+若出现：
+
+- `PreToolUse ... preflight-enforce.py`
+- 或 `No stderr output`（历史问题）
+
+处理顺序：
+
+1. 不要重复执行同一 Edit/Write/Bash
+2. 先完成 pre-flight 缺失项（`current_phase.md` / `.complexity-level`）
+3. 再继续代码修改
+
+推荐先执行只读检索：
+
+```bash
+Read .agent-flow/skills/Index.md
+Read .agent-flow/wiki/INDEX.md
+```
+
 **阶段门控点 G3（可选停）**
 - 条件：代码实现完成，测试证据齐全，风险已登记
 
@@ -196,6 +237,20 @@
 - 主Agent收集各 SubAgent 复盘
 - 按“触发频率 + 通用性”决定沉淀到项目级或 team 级 wiki/skills
 
+### 4.6 2026-04-30 新增更新（交付前最小校验）
+
+交付前固定执行：
+
+```bash
+agent-flow plugin verify
+agent-flow doctor --json
+```
+
+要求：
+
+- `plugin hooks verified: OK`
+- `doctor` 返回 `"ok": true`
+
 **阶段门控点 G4（建议停）**
 - 条件：用户确认通过，Jira/PR闭环完成，总结已沉淀
 
@@ -208,3 +263,4 @@
 1. 可自动化：初始化检查、模板生成、检索顺序、需求拆解模板化、project-structure 生成、Jira标准流转、测试证据收集、交付清单。
 2. 必须人工门控：业务歧义决策、关键设计取舍、非默认 Jira 字段、最终验收确认。
 3. 推荐策略：默认自动推进，仅在 G2/G4 强制停顿；G1/G3 作为可配置停顿点。
+
