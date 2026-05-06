@@ -5,7 +5,7 @@ module: tools
 status: active
 confidence: 0.9
 created: 2026-04-29
-last_validated: 2026-04-29
+last_validated: 2026-04-30
 tags: [jira, workflow, hidden-fields, validation, subtask]
 ---
 
@@ -108,3 +108,49 @@ echo "chrome" | jira auth login
 ```
 
 **Why**: `jira auth login` 使用 Typer prompt 等待用户输入浏览器类型，Agent 必须用管道输入避免卡住。
+
+### 7. "提测"流转 ID 在子任务上不一定是 161
+
+```bash
+# 错误假设
+jira issue transition SUBTASK-KEY --id 161
+# 报错：Transition ID 161 not found
+
+# 正确做法
+jira issue transitions SUBTASK-KEY
+# 例如实际可用为：
+# 91  提测（开发中 -> 待测试）
+```
+
+**Why**: 不同 issue type（父需求/子任务）和不同状态下的 workflow transition ID 会不同，不能复用历史 ID。
+
+**How to apply**: 每次流转前都先查一次 `jira issue transitions <KEY>`，按当前输出使用 ID。
+
+### 8. 子任务"提测"存在隐藏必填字段（即使显示 optional）
+
+本次在 `MPR-31190` 从“开发中”提测时，实际被验证器要求补填：
+
+- `customfield_11123` 实际开发工期
+- `customfield_11124` 自测状态
+- `customfield_11136` CR地址
+- `customfield_10531` QA对接人
+- `customfield_10510` 代码分支
+- `customfield_11308` 自测环境（本次额外触发）
+- `customfield_11310` 自测环境选择依据（建议同时补充）
+
+可用命令示例：
+
+```bash
+jira issue transition SUBTASK-KEY --id 91 \
+  --field customfield_11123=1 \
+  --field customfield_11124=通过 \
+  --field customfield_11136="https://code.taou.com/git/maimai/maimai_node/-/merge_requests/3919" \
+  --field customfield_10531=lichen3 \
+  --field customfield_10510="feat/company-weekly" \
+  --field customfield_11308=灰度 \
+  --field customfield_11310="本次提测基于灰度环境联调，功能与跳转链路已自测通过"
+```
+
+**Why**: Jira 字段元数据与工作流验证器规则不一致，`optional` 不能等于“可不填”。
+
+**How to apply**: 对提测/上线等关键流转，默认按“可能全部要填”准备字段值，再执行 transition。

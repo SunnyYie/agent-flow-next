@@ -5,7 +5,7 @@ module: jira
 status: active
 confidence: 0.98
 created: 2026-04-27
-last_validated: 2026-04-29
+last_validated: 2026-04-30
 tags: [jira, tool, sso, workflow]
 ---
 
@@ -111,6 +111,21 @@ jira issue transition MPR-子任务号 --id 81 \
   --field customfield_11121=8 \
   --field customfield_10513=2026-04-30
 ```
+7. 子任务提测（先查 ID，再补齐隐藏字段）：
+```bash
+# 每次先查，不能硬编码历史 ID
+jira issue transitions MPR-子任务号
+
+# 示例：本次 workflow 中提测 ID 为 91
+jira issue transition MPR-子任务号 --id 91 \
+  --field customfield_11123=1 \
+  --field customfield_11124=通过 \
+  --field customfield_11136="<CR链接>" \
+  --field customfield_10531=lichen3 \
+  --field customfield_10510="<开发分支>" \
+  --field customfield_11308=灰度 \
+  --field customfield_11310="自测环境选择依据"
+```
 
 ## 关键踩坑
 
@@ -121,6 +136,8 @@ jira issue transition MPR-子任务号 --id 81 \
 | 子任务前置条件 | "需要创建研发子任务后才可以继续" | 先创建子任务，再流转父单到开发中 |
 | 隐藏必填字段 | "XXX is required in this transition" | 预填所有 "may require" 字段（技术方案、计划上线时间等） |
 | 不能跨步流转 | Transition ID not found | 先 `jira issue transitions` 查可用流转，逐步执行 |
+| 提测 ID 不固定 | `Transition ID 161 not found` | 子任务提测前必须重新 `jira issue transitions` 获取当前 ID（例如 91） |
+| 提测隐藏必填 | 报错要求 `实际开发工期/自测状态/CR地址/QA对接人/代码分支/自测环境` | 提测前预填这些字段，避免交互中断 |
 
 ## 关联信息建议
 
