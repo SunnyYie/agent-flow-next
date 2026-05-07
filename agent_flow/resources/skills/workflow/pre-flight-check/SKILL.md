@@ -1,4 +1,5 @@
 ---
+description: Mandatory pre-task checks for complexity, context, and readiness before execution
 name: pre-flight-check
 version: 3.0.0
 trigger: 任何任务开始前, 新任务, task start, pre-flight, 开始工作, 新需求

@@ -1,4 +1,5 @@
 ---
+description: Promote repeated pitfalls into always-loaded critical knowledge for future runs
 name: critical-knowledge
 version: 1.0.0
 trigger: 临界知识注入, critical knowledge, 重复踩坑, 临界知识区管理

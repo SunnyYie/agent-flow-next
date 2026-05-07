@@ -1,3 +1,8 @@
+---
+name: tdd-workflow
+description: Test-driven workflow covering RED, GREEN, and IMPROVE phases
+---
+
 # Skill: TDD Workflow
 
 ## Trigger

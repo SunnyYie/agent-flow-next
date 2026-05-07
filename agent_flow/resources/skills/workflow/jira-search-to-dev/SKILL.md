@@ -1,4 +1,5 @@
 ---
+description: Standardize Jira flow from search and ticket creation to in-development transition
 name: jira-search-to-dev
 version: 1.2.0
 trigger: jira建单, jira流转, 需求入开发, 从搜索到开发中

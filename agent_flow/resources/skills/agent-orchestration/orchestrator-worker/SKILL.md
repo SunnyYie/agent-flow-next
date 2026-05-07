@@ -1,3 +1,8 @@
+---
+name: orchestrator-worker
+description: Orchestrator-worker pattern for dynamic task decomposition and multi-agent execution
+---
+
 # Skill: 编排者-工作者模式
 
 > 来源: [claude-cookbooks/orchestrator_workers.ipynb](https://github.com/anthropics/claude-cookbooks/blob/main/patterns/agents/orchestrator_workers.ipynb)

@@ -1,3 +1,8 @@
+---
+name: phase-review
+description: Phase-end review and summary procedure after all subtasks are verified
+---
+
 # Skill: Phase Review and Summary
 
 ## Trigger

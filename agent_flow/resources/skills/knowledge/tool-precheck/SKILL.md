@@ -1,4 +1,5 @@
 ---
+description: Run tool precheck reminders before external CLI usage to prevent common pitfalls
 name: tool-precheck
 version: 1.0.0
 trigger: 工具使用前检查, tool precheck, lark-cli, glab, gh, docker

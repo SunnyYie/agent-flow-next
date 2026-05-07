@@ -1,4 +1,5 @@
 ---
+description: Verify completion against acceptance criteria, tests, and quality requirements
 name: acceptance-check
 version: 2.0.0
 trigger: sub-task complete, 验收, 质量检查, review, 评审, 审查, 验证, 验收标准, 质量审查, acceptance

@@ -1,3 +1,8 @@
+---
+name: implementation-patterns
+description: Implementation patterns for extending modules safely and consistently
+---
+
 # Skill: Implementation Patterns
 
 ## Trigger

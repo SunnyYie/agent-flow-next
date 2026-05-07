@@ -1,4 +1,5 @@
 ---
+description: Review code changes for correctness, risk, regressions, and quality gates
 name: code-review
 version: 2.0.0
 trigger: 代码审查, code review, 评审代码, 审查, review, CR, 代码评审, parallel review, 并行审查

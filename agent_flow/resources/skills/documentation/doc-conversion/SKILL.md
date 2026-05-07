@@ -1,4 +1,5 @@
 ---
+description: Convert source documents into structured target formats with template-aware organization
 name: doc-conversion
 version: 1.0.0
 trigger: 转换文档, 格式转换, 需求规格说明书, 文档转换, spec, 文档整理, 需求文档

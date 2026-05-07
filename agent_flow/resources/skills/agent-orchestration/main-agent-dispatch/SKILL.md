@@ -1,4 +1,5 @@
 ---
+description: Dispatch complex execution to sub-agents while keeping the main agent state-focused
 name: main-agent-dispatch
 version: 2.0.0
 trigger: 主Agent派发, 子Agent, Agent dispatch, context overflow, 上下文溢出

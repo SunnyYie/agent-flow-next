@@ -1,4 +1,5 @@
 ---
+description: Generate and update Feishu Wiki technical documentation from branch diffs
 name: feishu-wiki-tech-doc
 version: 1.0.0
 trigger: 飞书技术文档, wiki tech doc, 生成技术文档, feishu wiki document, 写文档到飞书

@@ -1,3 +1,8 @@
+---
+name: security-checks
+description: Security verification checklist for code paths that handle untrusted inputs and sensitive operations
+---
+
 # Skill: Security Verification Checks
 
 ## Trigger

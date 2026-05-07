@@ -1,4 +1,5 @@
 ---
+description: Batch upload local image assets to CDN and return per-file result links
 name: batch-upload-images-to-cdn
 version: 1.0.0
 trigger: 上传图片到cdn, 批量上传图片到cdn, 上传 assets/icons 图片到cdn, upload images to cdn, upload icon images

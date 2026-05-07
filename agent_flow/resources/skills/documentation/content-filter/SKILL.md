@@ -1,4 +1,5 @@
 ---
+description: Filter, sanitize, and distill document content based on explicit rules
 name: content-filter
 version: 1.0.0
 trigger: 内容过滤, 敏感信息, 去冗余, 信息提取, 内容清洗, 过滤, filter

@@ -1,4 +1,5 @@
 ---
+description: Decompose requirements, clarify constraints, and map changes to concrete code areas
 name: requirement-decomposition
 version: 3.0.0
 trigger: 需求文档, 需求分析, 需求拆解, 需求确认, requirement, 需求理解, 代码定位, 修改范围, impact analysis

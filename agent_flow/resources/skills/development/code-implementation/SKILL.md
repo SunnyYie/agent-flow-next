@@ -1,4 +1,5 @@
 ---
+description: Implement features, bug fixes, and refactors with guided engineering workflow
 name: code-implementation
 version: 1.0.0
 trigger: 写代码, 实现, 编码, coding, 开发, implement, 写函数, 开发功能

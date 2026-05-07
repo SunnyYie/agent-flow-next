@@ -1,4 +1,5 @@
 ---
+description: Drive architecture decisions with tradeoff analysis and ADR-style outputs
 name: architecture-design
 version: 1.0.0
 trigger: 架构设计, 系统设计, 技术选型, architecture, 系统架构, 架构决策, ADR

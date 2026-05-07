@@ -1,4 +1,5 @@
 ---
+description: Enforce mandatory pre-execution checks before each subtask starts
 name: subtask-guard
 version: 1.0.0
 trigger: 执行子任务, 子任务开始, subtask, 执行前搜索, 子任务执行

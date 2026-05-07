@@ -1,4 +1,5 @@
 ---
+description: Unified local and web knowledge search plus tool discovery workflow
 name: knowledge-search
 version: 2.0.0
 trigger: 搜索技能, 查找知识, 搜索完成, 工具发现, skill search, 查找方案, 安装工具, web-research, source-code-research, 代码调研
